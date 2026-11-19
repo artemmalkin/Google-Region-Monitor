@@ -1,17 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-19T20:03:57.734Z",
+  "updatedAt": "2026-11-19T20:04:58.723Z",
   "profiles": [
-    {
-      "id": "vetnam",
-      "name": "Вьетнам",
-      "interfaceLang": "vi",
-      "resultLangs": "vi, en",
-      "region": "VN",
-      "queries": [
-        "\"rosatom\""
-      ]
-    },
     {
       "id": "kitai",
       "name": "Китай",
