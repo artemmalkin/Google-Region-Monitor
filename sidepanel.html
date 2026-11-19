@@ -72,8 +72,12 @@
         </div>
         <div class="button-row">
           <button id="open-preferences" class="text-button" type="button">Открыть Google Preferences ↗</button>
-          <button id="apply-settings" class="text-button" type="button">Применить в Google ↗</button>
+          <button id="apply-settings" class="text-button" type="button">Применить профиль в Google ↗</button>
         </div>
+        <div class="button-row">
+          <button id="restore-russian-profile" class="button button-secondary button-compact" type="button">Вернуть русский профиль для обычной работы</button>
+        </div>
+        <p class="field-help">Русский профиль: интерфейс ru, результаты ru, регион RU. При применении вкладка Google Preferences автоматически станет активной.</p>
         <div id="capture-status" class="inline-status" role="status"></div>
       </div>
 
@@ -161,6 +165,11 @@
           <option value="10">10 страниц</option>
         </select>
         <p class="field-help">Сбор идёт последовательно с паузой между страницами. CAPTCHA и страницы согласия не обходятся.</p>
+        <label class="restore-after-monitor">
+          <input id="restore-russian-after-monitor" type="checkbox" checked>
+          <span>После завершения мониторинга автоматически вернуть русский профиль Google и открыть Preferences на переднем плане</span>
+        </label>
+        <button id="restore-russian-profile-monitor" class="button button-secondary button-compact" type="button">Вернуть русский профиль сейчас</button>
       </div>
 
       <div class="run-box">
@@ -174,7 +183,7 @@
 
   <footer>
     <span>Данные профилей хранятся локально в Chrome.</span>
-    <span id="app-version">v1.4.1</span>
+    <span id="app-version">v1.4.2</span>
   </footer>
 
   <script src="github-config.js"></script>

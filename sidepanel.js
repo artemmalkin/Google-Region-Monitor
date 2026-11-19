@@ -292,10 +292,12 @@ $('profile-import-file').addEventListener('change', async (event) => {
 });
 
 $('open-preferences').addEventListener('click', async () => {
-  const url = 'https://www.google.com/preferences?lang=1';
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (activeTab?.id) await chrome.tabs.update(activeTab.id, { url, active: true });
-  else await chrome.tabs.create({ url, active: true });
+  try {
+    await focusGooglePreferencesTab();
+    setStatus($('capture-status'), 'Google Preferences открыта на переднем плане.', 'success');
+  } catch (error) {
+    setStatus($('capture-status'), error.message || String(error), 'error');
+  }
 });
 $('capture-settings').addEventListener('click', async () => {
   const status = $('capture-status'); setStatus(status, 'Читаю открытые настройки Google…');
@@ -315,21 +317,38 @@ $('capture-settings').addEventListener('click', async () => {
 $('apply-settings').addEventListener('click', async () => {
   const status = $('capture-status');
   try {
-    const profile = readProfileFromForm(); await persistProfiles();
-    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !/^https:\/\/(www\.)?google\.com\/preferences(?:[/?#]|$)/i.test(tab.url || '')) {
-      if (tab?.id && /^https:\/\/(www\.)?google\.com\//i.test(tab.url || '')) {
-        tab = await chrome.tabs.update(tab.id, { url: 'https://www.google.com/preferences?lang=1', active: true });
-        await waitForTabComplete(tab.id, 25000);
-        tab = await chrome.tabs.get(tab.id);
-      } else { tab = await chrome.tabs.create({ url: 'https://www.google.com/preferences?lang=1', active: true }); await waitForTabComplete(tab.id, 25000); }
-    }
-    const [injection] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: applyGooglePreferences, args: [{ interfaceLang: profile.interfaceLang, resultLangs: profile.resultLangs, region: profile.region }] });
-    const result = injection?.result || {};
+    const profile = readProfileFromForm();
+    await persistProfiles();
+    const { result } = await applySettingsInFocusedPreferencesTab({
+      interfaceLang: profile.interfaceLang,
+      resultLangs: profile.resultLangs,
+      region: profile.region
+    });
     const summary = result.changed?.length ? `Применены: ${result.changed.join(', ')}.` : 'Настройки не применены.';
     const missing = result.notFound?.length ? ` Не распознаны: ${result.notFound.join(', ')}.` : '';
-    setStatus(status, summary + missing + (result.saveClicked ? ' Подтверждения Google нажаты.' : ' Проверьте страницу Google.'), result.changed?.length ? 'success' : 'error');
+    setStatus(status, summary + missing + (result.saveClicked ? ' Подтверждения Google нажаты. Вкладка Preferences оставлена активной.' : ' Проверьте страницу Google.'), result.changed?.length ? 'success' : 'error');
   } catch (error) { setStatus(status, error.message || String(error), 'error'); }
+});
+
+const RUSSIAN_PROFILE_SETTINGS = Object.freeze({ interfaceLang: 'ru', resultLangs: 'ru', region: 'RU' });
+async function restoreRussianGoogleProfile(statusElement = $('capture-status')) {
+  setStatus(statusElement, 'Возвращаю русский профиль Google и открываю Preferences на переднем плане…');
+  const { result } = await applySettingsInFocusedPreferencesTab(RUSSIAN_PROFILE_SETTINGS);
+  const missing = result.notFound?.length ? ` Не найдены: ${result.notFound.join(', ')}.` : '';
+  if (result.changed?.length && !result.notFound?.length) {
+    setStatus(statusElement, 'Русский профиль Google восстановлен: интерфейс — русский, язык результатов — русский, регион — Россия. Вкладка Preferences активна.', 'success');
+    return { ok: true, result };
+  }
+  setStatus(statusElement, `Не удалось полностью восстановить русский профиль.${missing} Проверьте выбранные значения на открытой вкладке Google Preferences.`, 'error');
+  return { ok: false, result };
+}
+$('restore-russian-profile').addEventListener('click', async () => {
+  try { await restoreRussianGoogleProfile($('capture-status')); }
+  catch (error) { setStatus($('capture-status'), error.message || String(error), 'error'); }
+});
+$('restore-russian-profile-monitor').addEventListener('click', async () => {
+  try { await restoreRussianGoogleProfile($('run-status')); }
+  catch (error) { setStatus($('run-status'), error.message || String(error), 'error'); }
 });
 
 async function captureGooglePreferences() {
@@ -561,37 +580,69 @@ async function applyGooglePreferences(settings) {
 
 async function autoApplyProfile(profile) {
   const status = $('capture-status');
-  setStatus(status, `Применяю профиль «${profile.name}» в Google…`);
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const onPreferences = /^https:\/\/(www\.)?google\.com\/preferences(?:[/?#]|$)/i.test(activeTab?.url || '');
-  let targetTab = activeTab;
-  let shouldClose = false;
-  if (!onPreferences) {
-    targetTab = await chrome.tabs.create({ url: 'https://www.google.com/preferences?lang=1', active: false });
-    shouldClose = true;
-    await waitForTabComplete(targetTab.id, 25000);
-    targetTab = await chrome.tabs.get(targetTab.id);
+  setStatus(status, `Применяю профиль «${profile.name}». Переключаюсь на Google Preferences…`);
+  const { result } = await applySettingsInFocusedPreferencesTab({
+    interfaceLang: profile.interfaceLang,
+    resultLangs: profile.resultLangs,
+    region: profile.region
+  });
+  if (result.changed?.length) {
+    const missing = result.notFound?.length ? ` Не найдены: ${result.notFound.join(', ')}.` : '';
+    setStatus(status, `Профиль выбран. Google: ${result.changed.join(', ')}.${missing} Вкладка Preferences активна.`, result.notFound?.length ? 'error' : 'success');
+  } else {
+    setStatus(status, `Профиль выбран, но Google не подтвердил настройки.${result.notFound?.length ? ` Не найдены: ${result.notFound.join(', ')}.` : ''} Вкладка Preferences открыта на переднем плане; проверьте её.`, 'error');
   }
+}
+
+const GOOGLE_PREFERENCES_URL = 'https://www.google.com/preferences?lang=1';
+function isGooglePreferencesTab(tab) {
+  return /^https:\/\/(?:www\.)?google\.com\/preferences(?:[/?#]|$)/i.test(tab?.url || '');
+}
+async function focusGooglePreferencesTab() {
+  const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const allTabs = await chrome.tabs.query({});
+  let tab = isGooglePreferencesTab(activeTab) ? activeTab : null;
+  if (!tab) {
+    tab = allTabs.find((candidate) => isGooglePreferencesTab(candidate)
+      && (!activeTab?.windowId || candidate.windowId === activeTab.windowId))
+      || allTabs.find(isGooglePreferencesTab)
+      || null;
+  }
+  if (tab?.id) {
+    tab = await chrome.tabs.update(tab.id, { active: true });
+  } else {
+    const createOptions = { url: GOOGLE_PREFERENCES_URL, active: true };
+    if (activeTab?.windowId) createOptions.windowId = activeTab.windowId;
+    tab = await chrome.tabs.create(createOptions);
+  }
+  if (tab?.windowId !== undefined) {
+    try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (_) { /* tab activation remains sufficient when window focus is restricted */ }
+  }
+  await waitForTabComplete(tab.id, 25000);
+  tab = await chrome.tabs.get(tab.id);
+  // Explicitly reactivate after navigation completes: Google can briefly re-render the tab.
+  await chrome.tabs.update(tab.id, { active: true });
+  if (tab.windowId !== undefined) {
+    try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (_) {}
+  }
+  return await chrome.tabs.get(tab.id);
+}
+async function applySettingsInFocusedPreferencesTab(settings) {
+  const tab = await focusGooglePreferencesTab();
+  const [injection] = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: applyGooglePreferences,
+    args: [{ interfaceLang: settings.interfaceLang || '', resultLangs: settings.resultLangs || '', region: settings.region || '' }]
+  });
+  // Interface-language changes can trigger a full navigation. Wait for it before
+  // reactivating Preferences so the final Google page is the focused tab.
+  await waitForTabComplete(tab.id, 15000);
+  await sleep(250);
   try {
-    const [injection] = await chrome.scripting.executeScript({
-      target: { tabId: targetTab.id },
-      func: applyGooglePreferences,
-      args: [{ interfaceLang: profile.interfaceLang, resultLangs: profile.resultLangs, region: profile.region }]
-    });
-    const result = injection?.result || {};
-    if (result.changed?.length) {
-      const missing = result.notFound?.length ? ` Не найдены: ${result.notFound.join(', ')}.` : '';
-      setStatus(status, `Профиль выбран. Google: ${result.changed.join(', ')}.${missing}`, 'success');
-    } else {
-      setStatus(status, `Профиль выбран, но Preferences не подтвердил настройки.${result.notFound?.length ? ` Не найдены: ${result.notFound.join(', ')}.` : ''} Мониторинг всё равно передаст hl/lr/gl в URL поиска.`, 'error');
-    }
-  } finally {
-    if (shouldClose) {
-      // Небольшая пауза даёт странице обработать событие сохранения Google.
-      await sleep(1000);
-      try { await chrome.tabs.remove(targetTab.id); } catch (_) {}
-    }
-  }
+    await chrome.tabs.update(tab.id, { active: true });
+    if (tab.windowId !== undefined) await chrome.windows.update(tab.windowId, { focused: true });
+  } catch (_) {}
+  return { tab: await chrome.tabs.get(tab.id), result: injection?.result || {} };
 }
 
 async function waitForTabComplete(tabId, timeoutMs = 30000) {
@@ -864,6 +915,21 @@ $('run-report').addEventListener('click', async () => {
   } finally {
     if (tabId !== null) {
       try { await chrome.tabs.remove(tabId); } catch (_) {}
+    }
+    if ($('restore-russian-after-monitor')?.checked) {
+      addLog('Мониторинг завершён: возвращаю русский профиль Google…');
+      try {
+        const { result } = await applySettingsInFocusedPreferencesTab(RUSSIAN_PROFILE_SETTINGS);
+        if (result.changed?.length && !result.notFound?.length) {
+          const currentStatus = $('run-status').textContent;
+          setStatus($('run-status'), `${currentStatus} Русский профиль Google восстановлен; Preferences открыта на переднем плане.`, 'success');
+          addLog('Русский профиль восстановлен: hl=ru, lr=lang_ru, gl=RU.');
+        } else {
+          addLog(`Не удалось полностью восстановить русский профиль${result.notFound?.length ? `: ${result.notFound.join(', ')}` : ''}. Проверьте вкладку Preferences.`);
+        }
+      } catch (restoreError) {
+        addLog(`Ошибка возврата к русскому профилю: ${restoreError.message || String(restoreError)}`);
+      }
     }
     isRunning = false;
     $('run-report').disabled = false;

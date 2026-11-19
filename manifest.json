@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Google Region Monitor",
-  "version": "1.4.1",
-  "description": "GitHub-синхронизация стандартных профилей, локальные профили, мониторинг выдачи Google и HTML-отчёты.",
+  "version": "1.4.2",
+  "description": "Управление профилями Google Preferences, возврат к русскому профилю, GitHub-синхронизация и мониторинг выдачи.",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",
@@ -11,7 +11,8 @@
     "activeTab",
     "tabs",
     "downloads",
-    "alarms"
+    "alarms",
+    "windows"
   ],
   "host_permissions": [
     "https://www.google.com/*",

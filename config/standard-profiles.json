@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-19T20:42:03.211Z",
+  "updatedAt": "2026-11-19T00:00:00.000Z",
   "profiles": [
     {
-      "id": "kitai",
-      "name": "Китай",
-      "interfaceLang": "zh-CN",
-      "resultLangs": "zh-CN",
-      "region": "HK",
+      "id": "vietnam",
+      "name": "Вьетнам",
+      "interfaceLang": "vi",
+      "resultLangs": "vi, en",
+      "region": "VN",
       "queries": [
-        "\"rosatom\" AND -\"rosatom.ru\""
+        "rosatom",
+        "\"rosatom\" AND \"rooppur\""
       ]
     }
   ]
