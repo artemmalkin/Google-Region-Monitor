@@ -107,3 +107,6 @@ footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 
 .update-card input[type="password"] { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 #delete-profile:disabled, #export-profile:disabled { opacity: .4; cursor: not-allowed; }
 #github-token { letter-spacing: .02em; }
+
+#save-standard-profile { flex: 1 1 100%; }
+#publish-profile, #save-standard-profile { white-space: normal; }

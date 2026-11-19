@@ -30,6 +30,12 @@ function setStatus(element, text, kind = '') {
   element.className = element.className.replace(/\b(error|success)\b/g, '').trim();
   if (kind) element.classList.add(kind);
 }
+function updateProfileActionButtons() {
+  const profile = selectedProfile();
+  const hasToken = !!$('github-token')?.value.trim();
+  if ($('save-standard-profile')) $('save-standard-profile').hidden = !(profile?.profileType === 'standard' && hasToken);
+  if ($('publish-profile')) $('publish-profile').hidden = !(profile?.profileType === 'user' && hasToken);
+}
 function normalizeQueries(value) { return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean); }
 function profileValues(profile) {
   return {
@@ -96,14 +102,17 @@ function renderProfileSelectors() {
   fill(selected, selectedProfileKey);
   fill(monitor, monitorProfileKey);
   const profile = selectedProfile();
-  $('delete-profile').disabled = !profile || profile.profileType === 'standard';
+  $('delete-profile').disabled = !profile;
+  $('delete-profile').title = profile?.profileType === 'standard' ? 'Удалить стандартный профиль из GitHub' : 'Удалить локальный профиль';
+  $('delete-profile').setAttribute('aria-label', $('delete-profile').title);
   $('export-profile').disabled = !profile || profile.profileType === 'standard';
+  updateProfileActionButtons();
 }
 function updateProfileKindText(profile = selectedProfile()) {
   const node = $('profile-kind');
   if (!profile) { node.textContent = 'Нет выбранного профиля.'; return; }
   if (profile.profileType === 'standard') {
-    node.textContent = 'Стандартный профиль из GitHub. При изменении будет создана отдельная пользовательская копия; оригинал не изменится.';
+    node.textContent = 'Стандартный профиль из GitHub. «Сохранить профиль» создаёт локальную копию. Чтобы изменить оригинал, используйте «Сохранить изменения…»; кнопка × удаляет профиль из GitHub. Для обеих операций нужен Fine-grained token.';
   } else if (profile.sourceStandardId) {
     node.textContent = 'Пользовательская копия стандартного профиля. Обновление GitHub не перезапишет ваши изменения.';
   } else {
@@ -206,7 +215,24 @@ $('delete-profile').addEventListener('click', async () => {
   const profile = selectedProfile();
   if (!profile) return;
   if (profile.profileType === 'standard') {
-    setStatus($('save-status'), 'Стандартный профиль нельзя удалить. Создайте пользовательскую копию.', 'error');
+    const confirmed = confirm(`Удалить стандартный профиль «${profile.name}» из GitHub? Это изменение попадёт в репозиторий и будет распространено всем пользователям после синхронизации.`);
+    if (!confirmed) return;
+    try {
+      await saveGitHubToken();
+      setStatus($('standard-sync-status'), `Удаляю стандартный профиль «${profile.name}» из GitHub…`);
+      await deleteStandardProfileFromGitHub(profile.id, profile.name);
+      const sync = await requestStandardSync(true, true);
+      if (!sync?.ok) throw new Error(`Профиль удалён в GitHub, но локальная синхронизация не удалась: ${sync?.error || 'неизвестная ошибка'}. Нажмите «Проверить обновление».`);
+      if (!getProfileByKey(selectedProfileKey)) selectedProfileKey = profiles[0] ? profileKey(profiles[0]) : null;
+      if (!getProfileByKey(monitorProfileKey)) monitorProfileKey = selectedProfileKey;
+      await persistProfiles();
+      renderProfileSelectors();
+      if (selectedProfile()) loadProfileIntoForm();
+      renderMonitorQueries();
+      setStatus($('standard-sync-status'), `Стандартный профиль «${profile.name}» удалён из GitHub.`, 'success');
+    } catch (error) {
+      setStatus($('standard-sync-status'), error.message || String(error), 'error');
+    }
     return;
   }
   userProfiles = userProfiles.filter((item) => item.id !== profile.id);
@@ -214,7 +240,7 @@ $('delete-profile').addEventListener('click', async () => {
   selectedProfileKey = profiles[0] ? profileKey(profiles[0]) : null;
   await persistProfiles();
   renderProfileSelectors();
-  loadProfileIntoForm();
+  if (selectedProfile()) loadProfileIntoForm();
   renderMonitorQueries();
 });
 $('queries').addEventListener('input', () => { $('query-count').textContent = String(normalizeQueries($('queries').value).length); });
@@ -833,7 +859,7 @@ async function getGitHubSettings() {
 async function saveGitHubToken() {
   const token = $('github-token').value.trim();
   await chrome.storage.local.set({ githubToken: token });
-  $('publish-profile').hidden = !token;
+  updateProfileActionButtons();
   return token;
 }
 
@@ -875,9 +901,7 @@ async function requestStandardSync(force = true, silent = false) {
   }
 }
 
-$('github-token').addEventListener('input', () => {
-  $('publish-profile').hidden = !$('github-token').value.trim();
-});
+$('github-token').addEventListener('input', updateProfileActionButtons);
 $('github-token').addEventListener('change', () => saveGitHubToken().catch(() => {}));
 
 async function checkGitHubUpdates(silent = false) {
@@ -995,15 +1019,10 @@ function decodeBase64Utf8(value) {
   return new TextDecoder().decode(bytes);
 }
 
-async function publishUserProfileToGitHub(profile) {
+async function mutateStandardConfigOnGitHub({ addProfile = null, updateProfile = null, deleteId = null, profileName = '' }) {
   const settings = await getGitHubSettings();
-  if (!validGitHubSettings(settings)) throw new Error('Сначала заполните репозиторий, ветку и путь к файлу стандартных профилей.');
-  // Always refresh before modifying the remote config, so we don't overwrite a newer list.
-  const syncResult = await requestStandardSync(true, true);
-  if (!syncResult?.ok) throw new Error('Сначала синхронизируйте стандартные профили из GitHub.');
-  const standardId = getStandardIdForUserProfile(profile, standardProfiles);
-
-  if (!settings.token) throw new Error('Для публикации профиля заполните GitHub Fine-grained token.');
+  if (!validGitHubSettings(settings)) throw new Error('Проверьте owner, repository, branch и standardProfilesPath в github-config.js.');
+  if (!settings.token) throw new Error('Для изменения стандартных профилей заполните GitHub Fine-grained token.');
 
   const apiUrl = `https://api.github.com/repos/${settings.repo}/contents/${settings.path.split('/').map(encodeURIComponent).join('/')}`;
   const headers = {
@@ -1012,72 +1031,146 @@ async function publishUserProfileToGitHub(profile) {
     'Content-Type': 'application/json',
     'X-GitHub-Api-Version': '2022-11-28'
   };
-  let sha;
   const getResponse = await fetch(`${apiUrl}?ref=${encodeURIComponent(settings.branch)}`, { headers });
+  let sha;
+  let config = { schemaVersion: 1, profiles: [] };
   if (getResponse.ok) {
     const remoteFile = await getResponse.json();
     sha = remoteFile.sha;
-    // Rebase on the latest file before PUT, protecting edits made after the sync request.
-    if (remoteFile.content) {
-      let remoteConfig;
-      try { remoteConfig = JSON.parse(decodeBase64Utf8(remoteFile.content)); } catch (_) { throw new Error('Не удалось разобрать текущий JSON в GitHub.'); }
-      if (!Array.isArray(remoteConfig.profiles)) throw new Error('В GitHub JSON отсутствует массив profiles. Публикация отменена, чтобы не затереть файл.');
-      const remoteProfiles = remoteConfig.profiles;
-      const id = getStandardIdForUserProfile(profile, remoteProfiles);
-      const existingIndex = remoteProfiles.findIndex((item) => String(item.id || '') === id);
-      const entry = profileToConfigEntry(profile, id);
-      if (existingIndex >= 0) remoteProfiles[existingIndex] = entry;
-      else remoteProfiles.push(entry);
-      remoteConfig.schemaVersion = 1;
-      remoteConfig.updatedAt = new Date().toISOString();
-      remoteConfig.profiles = remoteProfiles;
-      const body = JSON.stringify(remoteConfig, null, 2);
-      const putResponse = await fetch(apiUrl, {
-        method: 'PUT', headers,
-        body: JSON.stringify({ message: `Add standard profile: ${profile.name}`, content: encodeBase64Utf8(body), sha, branch: settings.branch })
-      });
-      if (!putResponse.ok) throw new Error(`GitHub не принял изменение (HTTP ${putResponse.status}). Проверьте Contents: Read and write и ветку.`);
-      return id;
-    }
+    if (!remoteFile.content) throw new Error('GitHub не вернул содержимое JSON-файла. Проверьте размер файла и доступ токена.');
+    try { config = JSON.parse(decodeBase64Utf8(remoteFile.content)); }
+    catch (_) { throw new Error('Не удалось разобрать текущий JSON стандартных профилей в GitHub.'); }
+    if (Array.isArray(config)) config = { schemaVersion: 1, profiles: config };
   } else if (getResponse.status !== 404) {
-    throw new Error(`Не удалось прочитать файл конфигурации GitHub (HTTP ${getResponse.status}).`);
+    throw new Error(`Не удалось прочитать стандартные профили в GitHub (HTTP ${getResponse.status}). Проверьте токен и доступ к репозиторию.`);
+  } else if (updateProfile || deleteId) {
+    throw new Error('Файл стандартных профилей не найден в GitHub. Сначала создайте его или выполните синхронизацию.');
   }
 
-  // Create file only if it does not exist yet.
+  if (!Array.isArray(config.profiles)) throw new Error('В GitHub JSON отсутствует массив profiles. Изменение отменено, чтобы не затереть файл.');
+  const remoteProfiles = config.profiles;
+  let changedId = '';
+  let commitMessage = '';
+
+  if (addProfile) {
+    const id = getStandardIdForUserProfile(addProfile, remoteProfiles);
+    const entry = profileToConfigEntry(addProfile, id);
+    const existingIndex = remoteProfiles.findIndex((item) => String(item.id || '') === id);
+    if (existingIndex >= 0) remoteProfiles[existingIndex] = entry;
+    else remoteProfiles.push(entry);
+    changedId = id;
+    commitMessage = `Add standard profile: ${entry.name}`;
+  } else if (updateProfile) {
+    const id = String(updateProfile.id || '');
+    const existingIndex = remoteProfiles.findIndex((item) => String(item.id || '') === id);
+    if (existingIndex < 0) throw new Error(`Стандартный профиль с ID «${id}» уже отсутствует в GitHub. Синхронизируйте список и выберите существующий профиль.`);
+    const entry = profileToConfigEntry(updateProfile, id);
+    remoteProfiles[existingIndex] = entry;
+    changedId = id;
+    commitMessage = `Update standard profile: ${entry.name}`;
+  } else if (deleteId) {
+    const id = String(deleteId);
+    const existingIndex = remoteProfiles.findIndex((item) => String(item.id || '') === id);
+    if (existingIndex < 0) throw new Error(`Стандартный профиль с ID «${id}» уже отсутствует в GitHub.`);
+    const [removed] = remoteProfiles.splice(existingIndex, 1);
+    changedId = id;
+    commitMessage = `Delete standard profile: ${removed.name || profileName || id}`;
+  } else {
+    throw new Error('Не задана операция для стандартного профиля.');
+  }
+
+  config.schemaVersion = Number(config.schemaVersion) || 1;
+  config.updatedAt = new Date().toISOString();
+  config.profiles = remoteProfiles;
   const body = JSON.stringify(config, null, 2);
   const putResponse = await fetch(apiUrl, {
-    method: 'PUT', headers,
-    body: JSON.stringify({ message: `Add standard profile: ${profile.name}`, content: encodeBase64Utf8(body), ...(sha ? { sha } : {}), branch: settings.branch })
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({
+      message: commitMessage,
+      content: encodeBase64Utf8(body),
+      ...(sha ? { sha } : {}),
+      branch: settings.branch
+    })
   });
-  if (!putResponse.ok) throw new Error(`GitHub не принял изменение (HTTP ${putResponse.status}). Проверьте Contents: Read and write и ветку.`);
-  return standardId;
+  if (!putResponse.ok) {
+    const details = await putResponse.json().catch(() => ({}));
+    if (putResponse.status === 409 || putResponse.status === 422) {
+      throw new Error(`GitHub отклонил commit (HTTP ${putResponse.status}). Возможно, файл одновременно изменился. Сначала нажмите «Проверить обновление» и повторите действие. ${details.message || ''}`.trim());
+    }
+    throw new Error(`GitHub не принял изменение (HTTP ${putResponse.status}). ${details.message || 'Проверьте Contents: Read and write.'}`);
+  }
+  return changedId;
 }
+
+async function publishUserProfileToGitHub(profile) {
+  return mutateStandardConfigOnGitHub({ addProfile: profile });
+}
+async function updateStandardProfileOnGitHub(profile) {
+  return mutateStandardConfigOnGitHub({ updateProfile: profile });
+}
+async function deleteStandardProfileFromGitHub(id, name) {
+  return mutateStandardConfigOnGitHub({ deleteId: id, profileName: name });
+}
+
+$('save-standard-profile').addEventListener('click', async () => {
+  const current = selectedProfile();
+  if (!current || current.profileType !== 'standard') return;
+  const draft = {
+    id: current.id,
+    name: $('profile-name').value.trim(),
+    interfaceLang: $('interface-lang').value.trim(),
+    resultLangs: $('results-langs').value.trim(),
+    region: $('search-region').value.trim().toUpperCase(),
+    queries: normalizeQueries($('queries').value)
+  };
+  if (!draft.name) {
+    setStatus($('standard-sync-status'), 'Укажите название стандартного профиля.', 'error');
+    return;
+  }
+  try {
+    await saveGitHubToken();
+    setStatus($('standard-sync-status'), `Отправляю изменения профиля «${draft.name}» в GitHub…`);
+    await updateStandardProfileOnGitHub(draft);
+    const sync = await requestStandardSync(true, true);
+    if (!sync?.ok) {
+      setStatus($('standard-sync-status'), `Изменения профиля «${draft.name}» уже сохранены в GitHub, но список на устройстве не обновился: ${sync?.error || 'ошибка синхронизации'}. Нажмите «Проверить обновление».`, 'error');
+      return;
+    }
+    selectedProfileKey = `std:${draft.id}`;
+    await persistProfiles();
+    renderProfileSelectors();
+    loadProfileIntoForm();
+    renderMonitorQueries();
+    setStatus($('standard-sync-status'), `Стандартный профиль «${draft.name}» обновлён в GitHub. Commit создан.`, 'success');
+  } catch (error) {
+    setStatus($('standard-sync-status'), error.message || String(error), 'error');
+  }
+});
 
 $('publish-profile').addEventListener('click', async () => {
   let profile;
   try {
     profile = readProfileFromForm();
     await persistProfiles();
-    if (!profile || profile.profileType === 'standard') throw new Error('Сначала сохраните изменения как пользовательскую копию.');
+    if (!profile || profile.profileType === 'standard') throw new Error('Выберите пользовательский профиль для добавления в стандартный список.');
     await saveGitHubToken();
-    const settings = await getGitHubSettings();
-    if (!settings.token) throw new Error('Для публикации профиля заполните GitHub Fine-grained token.');
     setStatus($('standard-sync-status'), 'Добавляю профиль в стандартную конфигурацию GitHub…');
     const result = await publishUserProfileToGitHub(profile);
-    profile.publishedStandardId = result?.id || result;
+    profile.publishedStandardId = result;
     await persistProfiles();
-    await requestStandardSync(true, true);
+    const sync = await requestStandardSync(true, true);
+    if (!sync?.ok) throw new Error(`Профиль добавлен в GitHub, но локальная синхронизация не удалась: ${sync?.error || 'ошибка'}. Нажмите «Проверить обновление».`);
     setStatus($('standard-sync-status'), `Профиль опубликован в GitHub как «${result}». Стандартный список обновлён.`, 'success');
   } catch (error) {
     setStatus($('standard-sync-status'), error.message || String(error), 'error');
   }
 });
 
-
 async function initializeGitHubFeatures() {
   const stored = await chrome.storage.local.get({ githubToken: '' });
   $('github-token').value = stored.githubToken || '';
-  $('publish-profile').hidden = !String(stored.githubToken || '').trim();
+  updateProfileActionButtons();
   const settings = await getGitHubSettings();
   if (validGitHubSettings(settings)) {
     await requestStandardSync(false, true);

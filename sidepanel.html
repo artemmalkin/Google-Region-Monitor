@@ -92,10 +92,13 @@
       <div class="card update-card">
         <h3>Стандартные профили из GitHub</h3>
         <p class="field-help">Стандартные профили автоматически синхронизируются раз в день. Ручная синхронизация выполняется кнопкой «Проверить обновление». Настройки репозитория задаются в github-config.js.</p>
-        <label class="field-label" for="github-token">GitHub Fine-grained token (для публикации профиля)</label>
+        <label class="field-label" for="github-token">GitHub Fine-grained token (для изменения стандартных профилей)</label>
         <input id="github-token" type="password" autocomplete="off" placeholder="github_pat_…">
-        <p class="field-help">Нужен только для записи в репозиторий: Contents → Read and write. Токен сохраняется локально в Chrome; не добавляйте его в конфигурацию или GitHub.</p>
-        <div class="button-row"><button id="publish-profile" class="button button-secondary button-compact" type="button" hidden>Добавить мой профиль в GitHub</button></div>
+        <p class="field-help">Нужен для добавления, редактирования и удаления стандартных профилей. Разрешение: Contents → Read and write только для этого репозитория. Токен хранится локально в Chrome.</p>
+        <div class="button-row">
+          <button id="publish-profile" class="button button-secondary button-compact" type="button" hidden>Добавить мой профиль в GitHub</button>
+          <button id="save-standard-profile" class="button button-primary button-compact" type="button" hidden>Сохранить изменения стандартного профиля в GitHub</button>
+        </div>
         <div id="standard-sync-status" class="inline-status" role="status"></div>
       </div>
 
@@ -171,7 +174,7 @@
 
   <footer>
     <span>Данные профилей хранятся локально в Chrome.</span>
-    <span id="app-version">v1.2.0</span>
+    <span id="app-version">v1.4.0</span>
   </footer>
 
   <script src="github-config.js"></script>
