@@ -333,16 +333,22 @@ $('apply-settings').addEventListener('click', async () => {
 });
 
 async function captureGooglePreferences() {
-  // Google Preferences uses custom dialogs, not native <select> controls.
+  // Read Google Preferences by stable DOM attributes, not by the UI language.
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
   const normalize = (value) => clean(value).toLocaleLowerCase();
-  const getControl = (pid) => document.querySelector(`.lnnMGf[data-pid="${pid}"]`);
-  const getDialog = (control) => control?.querySelector('[role="dialog"]')
-    || control?.querySelector('g-dialog [role="dialog"]')
-    || null;
-  const getSelectedText = (dialog, selector) => {
-    const item = dialog?.querySelector(selector);
-    return item ? clean(item.querySelector('[jsname="ibnC6b"]')?.textContent || item.innerText || item.textContent) : '';
+  const getControl = (pid) => document.querySelector(`[data-pid="${pid}"]`);
+  const getDialog = (control) => {
+    const local = control?.querySelector('[role="dialog"]');
+    if (local) return local;
+    const heading = normalize(control?.querySelector('.gn0F7d')?.textContent);
+    const dialogs = [...document.querySelectorAll('[role="dialog"]')];
+    return dialogs.find((dialog) => heading && normalize(dialog.getAttribute('aria-label')) === heading)
+      || dialogs.find((dialog) => heading && normalize(dialog.textContent).includes(heading))
+      || null;
+  };
+  const selectedOptionText = (dialog) => {
+    const item = dialog?.querySelector('[role="option"][aria-selected="true"], [role="option"].CB8nDe');
+    return clean(item?.querySelector('[jsname="ibnC6b"]')?.textContent || item?.innerText || item?.textContent);
   };
   const findCodeByLabel = (control, selector, label) => {
     if (!control || !label) return '';
@@ -359,35 +365,46 @@ async function captureGooglePreferences() {
   const lrControl = getControl('lr');
   const glControl = getControl('gl');
 
-  const hlDialog = getDialog(hlControl);
-  const hlLabel = getSelectedText(hlDialog, '[role="option"][aria-selected="true"], [role="option"].CB8nDe');
+  const hlLabel = selectedOptionText(getDialog(hlControl));
   let interfaceLang = findCodeByLabel(hlControl, '.vFhVge [data-value]', hlLabel);
   if (!interfaceLang) {
-    // On some versions the currently selected language is also exposed as the root document language.
+    // Fallback for Google layouts that expose the current language as a data attribute.
+    const selected = hlControl?.querySelector('.vFhVge[data-value], .vFhVge [data-value][aria-selected="true"]');
+    interfaceLang = selected?.getAttribute('data-value') || '';
+  }
+  if (!interfaceLang) {
     const docLang = clean(document.documentElement.lang);
     if (/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(docLang)) interfaceLang = docLang;
   }
 
-  const glDialog = getDialog(glControl);
-  const glLabel = getSelectedText(glDialog, '[role="option"][aria-selected="true"], [role="option"].CB8nDe');
+  const glLabel = selectedOptionText(getDialog(glControl));
   const region = findCodeByLabel(glControl, '.vFhVge [data-value]', glLabel);
 
   const lrDialog = getDialog(lrControl);
   const selectedItems = [...(lrDialog?.querySelectorAll('[role="menuitemcheckbox"][aria-checked="true"], [role="menuitemcheckbox"].CB8nDe') || [])];
-  const rawMap = lrControl?.querySelector('[data-alllangmap]')?.getAttribute('data-alllangmap') || '';
+  const langTrigger = lrControl?.querySelector('.vFhVge[data-alllangmap], [data-alllangmap]');
+  const rawMap = langTrigger?.getAttribute('data-alllangmap') || '';
   const languageMap = rawMap.split(';').map((entry) => {
-    const [code, label] = entry.split('|');
-    return { code: clean(code).replace(/^lang_/i, ''), label: clean(label) };
-  }).filter((entry) => entry.code && entry.label);
+    const separator = entry.indexOf('|');
+    if (separator < 0) return null;
+    return {
+      code: clean(entry.slice(0, separator)).replace(/^lang_/i, ''),
+      label: clean(entry.slice(separator + 1))
+    };
+  }).filter((entry) => entry?.code && entry?.label);
   const resultLangs = [];
   for (const item of selectedItems) {
-    const itemText = clean(item.querySelector('[jsname="ibnC6b"]')?.textContent || item.innerText || item.textContent);
+    const itemText = normalize(item.querySelector('[jsname="ibnC6b"]')?.textContent || item.innerText || item.textContent);
     const match = languageMap.find((entry) => {
       const label = normalize(entry.label);
-      const text = normalize(itemText);
-      return text === label || text.startsWith(label + ' ') || text.startsWith(label + '(');
+      return itemText === label || itemText.startsWith(label + ' ') || itemText.startsWith(label + '(');
     });
     if (match) resultLangs.push(match.code);
+  }
+  // Current Google markup also publishes the selected language codes on the trigger.
+  if (!resultLangs.length) {
+    const displayLangs = langTrigger?.getAttribute('data-displaylang') || '';
+    resultLangs.push(...displayLangs.split(/[;,\s]+/).map((value) => clean(value).replace(/^lang_/i, '')).filter(Boolean));
   }
 
   return {
@@ -399,18 +416,39 @@ async function captureGooglePreferences() {
 }
 
 async function applyGooglePreferences(settings) {
+  // Google localizes visible labels, but these attributes/actions remain stable across languages.
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
   const normalize = (value) => clean(value).toLocaleLowerCase();
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const getControl = (pid) => document.querySelector(`.lnnMGf[data-pid="${pid}"]`);
-  const getDialog = (control) => control?.querySelector('[role="dialog"]')
-    || control?.querySelector('g-dialog [role="dialog"]')
-    || null;
-  const findConfirm = (dialog) => {
-    const buttons = [...(dialog?.querySelectorAll('button,[role="button"]') || [])];
-    return buttons.find((button) => /^(confirm|ok|apply|save|done|确定|確認|确认|適用|保存|сохранить|применить|подтвердить|готово|aceptar|valider|bevestigen)$/i.test(
-      clean(button.innerText || button.textContent || button.getAttribute('aria-label'))
-    )) || buttons[buttons.length - 1] || null;
+  const getControl = (pid) => document.querySelector(`[data-pid="${pid}"]`);
+  const getTrigger = (control) => control?.querySelector('.HrqWPb')
+    || control?.querySelector('[jsname="jOfkMb"]')
+    || control?.querySelector('[tabindex]')
+    || control;
+  const getDialog = (control) => {
+    const local = control?.querySelector('[role="dialog"]');
+    if (local) return local;
+    const heading = normalize(control?.querySelector('.gn0F7d')?.textContent);
+    const dialogs = [...document.querySelectorAll('[role="dialog"]')];
+    return dialogs.find((dialog) => heading && normalize(dialog.getAttribute('aria-label')) === heading)
+      || dialogs.find((dialog) => heading && normalize(dialog.textContent).includes(heading))
+      || dialogs[dialogs.length - 1]
+      || null;
+  };
+  const isVisible = (element) => {
+    if (!element || element.hidden) return false;
+    const style = getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+  };
+  const openDialog = async (control) => {
+    if (!control) return null;
+    let dialog = getDialog(control);
+    if (!isVisible(dialog)) {
+      getTrigger(control)?.click();
+      await delay(360);
+      dialog = getDialog(control);
+    }
+    return isVisible(dialog) ? dialog : null;
   };
   const textForCode = (control, code) => {
     const wanted = clean(code).replace(/^lang_/i, '').toLowerCase();
@@ -418,64 +456,56 @@ async function applyGooglePreferences(settings) {
       .find((node) => clean(node.getAttribute('data-value')).toLowerCase() === wanted)
       ?.textContent || '';
   };
-  const matchMenuItem = (dialog, selector, mappedText) => {
+  const matchMenuItem = (dialog, roles, mappedText) => {
     const wanted = normalize(mappedText);
     if (!wanted) return null;
-    return [...(dialog?.querySelectorAll(selector) || [])].find((item) => {
+    return [...(dialog?.querySelectorAll(roles) || [])].find((item) => {
       const label = normalize(item.querySelector('[jsname="ibnC6b"]')?.textContent || item.innerText || item.textContent);
       return label === wanted || label.startsWith(wanted + ' ') || label.startsWith(wanted + '(');
     }) || null;
   };
   const confirmDialog = async (dialog) => {
-    const button = findConfirm(dialog);
+    if (!dialog) return false;
+    // Google's current Preferences UI marks the positive action with jsaction Bx2hUb.
+    // This avoids depending on labels such as Confirm, 确认, Aceptar, etc.
+    const explicit = dialog.querySelector('[jsaction*="Bx2hUb"], [data-mdc-dialog-action="ok"], [data-mdc-dialog-action="accept"]');
+    const buttons = [...(dialog.querySelectorAll('button,[role="button"]') || [])];
+    const button = explicit || buttons.find((node) => /^(confirm|ok|apply|save|done|yes|确定|確認|确认|適用|保存|сохранить|применить|подтвердить|готово|aceptar|valider|bevestigen)$/i.test(
+      clean(node.innerText || node.textContent || node.getAttribute('aria-label'))
+    )) || buttons.filter((node) => node.classList.contains('GmiStb')).at(-1) || buttons.at(-1);
     if (!button) return false;
     button.click();
-    await delay(350);
+    await delay(500);
     return true;
+  };
+  const languageMapFor = (control) => {
+    const trigger = control?.querySelector('.vFhVge[data-alllangmap], [data-alllangmap]');
+    const rawMap = trigger?.getAttribute('data-alllangmap') || '';
+    return rawMap.split(';').map((entry) => {
+      const separator = entry.indexOf('|');
+      if (separator < 0) return null;
+      return {
+        code: clean(entry.slice(0, separator)).replace(/^lang_/i, '').toLowerCase(),
+        label: clean(entry.slice(separator + 1))
+      };
+    }).filter((entry) => entry?.code && entry?.label);
   };
 
   const changed = [];
   const notFound = [];
 
-  // Interface language (hl): map language code to Google's localized option label.
-  if (clean(settings.interfaceLang)) {
-    const control = getControl('hl');
-    const wantedLabel = textForCode(control, settings.interfaceLang);
-    if (control && wantedLabel) {
-      control.click();
-      await delay(220);
-      const dialog = getDialog(control);
-      const item = matchMenuItem(dialog, '[role="option"]', wantedLabel);
-      if (dialog && item) {
-        const alreadySelected = item.getAttribute('aria-selected') === 'true' || item.classList.contains('CB8nDe');
-        if (!alreadySelected) item.click();
-        if (await confirmDialog(dialog)) changed.push('язык интерфейса');
-      } else notFound.push('язык интерфейса');
-    } else notFound.push('язык интерфейса');
-  }
-
-  // Result language filter (lr): the custom menu exposes checked items and data-alllangmap.
+  // Apply result-language filter first and region second. Change interface language last,
+  // because Google may reload or re-render Preferences after changing hl.
   {
     const control = getControl('lr');
-    if (control) {
-      const rawMap = control.querySelector('[data-alllangmap]')?.getAttribute('data-alllangmap') || '';
-      const languageMap = rawMap.split(';').map((entry) => {
-        const [code, label] = entry.split('|');
-        return { code: clean(code).replace(/^lang_/i, '').toLowerCase(), label: clean(label) };
-      }).filter((entry) => entry.code && entry.label);
-      const wantedCodes = clean(settings.resultLangs).split(',').map((value) => value.trim().replace(/^lang_/i, '').toLowerCase()).filter(Boolean);
-      if (wantedCodes.length > 8) {
-        throw new Error('Google позволяет выбрать не более 8 языков фильтрации.');
-      }
-      control.click();
-      await delay(220);
-      const dialog = getDialog(control);
+    const languageMap = languageMapFor(control);
+    const wantedCodes = clean(settings.resultLangs).split(',').map((value) => value.trim().replace(/^lang_/i, '').toLowerCase()).filter(Boolean);
+    if (wantedCodes.length > 8) throw new Error('Google позволяет выбрать не более 8 языков фильтрации.');
+    if (control && languageMap.length) {
+      const dialog = await openDialog(control);
       const items = [...(dialog?.querySelectorAll('[role="menuitemcheckbox"]') || [])];
       if (dialog && items.length) {
-        let allFound = true;
-        for (const code of wantedCodes) {
-          if (!languageMap.some((entry) => entry.code === code)) allFound = false;
-        }
+        const allFound = wantedCodes.every((code) => languageMap.some((entry) => entry.code === code));
         for (const item of items) {
           const itemText = normalize(item.querySelector('[jsname="ibnC6b"]')?.textContent || item.innerText || item.textContent);
           const mapEntry = languageMap.find((entry) => {
@@ -485,9 +515,9 @@ async function applyGooglePreferences(settings) {
           if (!mapEntry) continue;
           const shouldBeChecked = wantedCodes.includes(mapEntry.code);
           const isChecked = item.getAttribute('aria-checked') === 'true' || item.classList.contains('CB8nDe');
-          if (shouldBeChecked !== isChecked) {
+          if (shouldBeChecked !== isChecked && !item.hasAttribute('disabled')) {
             item.click();
-            await delay(35);
+            await delay(45);
           }
         }
         if (allFound && await confirmDialog(dialog)) changed.push('языки результатов');
@@ -496,21 +526,34 @@ async function applyGooglePreferences(settings) {
     } else notFound.push('языки результатов');
   }
 
-  // Search region (gl): map ISO country code to the localized country option.
-  if (clean(settings.region)) {
+  {
     const control = getControl('gl');
     const wantedLabel = textForCode(control, settings.region);
     if (control && wantedLabel) {
-      control.click();
-      await delay(220);
-      const dialog = getDialog(control);
+      const dialog = await openDialog(control);
       const item = matchMenuItem(dialog, '[role="option"]', wantedLabel);
       if (dialog && item) {
         const alreadySelected = item.getAttribute('aria-selected') === 'true' || item.classList.contains('CB8nDe');
         if (!alreadySelected) item.click();
         if (await confirmDialog(dialog)) changed.push('регион поиска');
+        else notFound.push('регион поиска');
       } else notFound.push('регион поиска');
-    } else notFound.push('регион поиска');
+    } else if (clean(settings.region)) notFound.push('регион поиска');
+  }
+
+  if (clean(settings.interfaceLang)) {
+    const control = getControl('hl');
+    const wantedLabel = textForCode(control, settings.interfaceLang);
+    if (control && wantedLabel) {
+      const dialog = await openDialog(control);
+      const item = matchMenuItem(dialog, '[role="option"]', wantedLabel);
+      if (dialog && item) {
+        const alreadySelected = item.getAttribute('aria-selected') === 'true' || item.classList.contains('CB8nDe');
+        if (!alreadySelected) item.click();
+        if (await confirmDialog(dialog)) changed.push('язык интерфейса');
+        else notFound.push('язык интерфейса');
+      } else notFound.push('язык интерфейса');
+    } else notFound.push('язык интерфейса');
   }
 
   return { changed, notFound, saveClicked: changed.length > 0 };
