@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Google Region Monitor",
-  "version": "1.4.2",
-  "description": "Управление профилями Google Preferences, возврат к русскому профилю, GitHub-синхронизация и мониторинг выдачи.",
+  "version": "1.4.3",
+  "description": "Управление профилями Google Preferences, GitHub-синхронизация и мониторинг выбранных поисковых запросов с остановкой.",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",

@@ -14,6 +14,9 @@ let profiles = [];
 let selectedProfileKey = null;
 let monitorProfileKey = null;
 let isRunning = false;
+let stopRequested = false;
+let stopSignalResolver = null;
+let stopSignalPromise = null;
 
 const $ = (id) => document.getElementById(id);
 function makeId() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
@@ -645,7 +648,7 @@ async function applySettingsInFocusedPreferencesTab(settings) {
   return { tab: await chrome.tabs.get(tab.id), result: injection?.result || {} };
 }
 
-async function waitForTabComplete(tabId, timeoutMs = 30000) {
+async function waitForTabComplete(tabId, timeoutMs = 30000, cancelPromise = null) {
   const initial = await chrome.tabs.get(tabId);
   if (initial.status === 'complete') return initial;
   return new Promise((resolve, reject) => {
@@ -654,14 +657,22 @@ async function waitForTabComplete(tabId, timeoutMs = 30000) {
     const listener = (updatedTabId, changeInfo, tab) => {
       if (updatedTabId === tabId && changeInfo.status === 'complete') finish(null, tab);
     };
+    const removedListener = (removedTabId) => {
+      if (removedTabId === tabId) finish(new Error('Вкладка мониторинга была закрыта.'));
+    };
     function finish(error, tab) {
       if (done) return;
       done = true;
       clearTimeout(timer);
       chrome.tabs.onUpdated.removeListener(listener);
+      chrome.tabs.onRemoved.removeListener(removedListener);
       error ? reject(error) : resolve(tab);
     }
     chrome.tabs.onUpdated.addListener(listener);
+    chrome.tabs.onRemoved.addListener(removedListener);
+    if (cancelPromise) {
+      cancelPromise.then(() => finish(null, { cancelled: true }));
+    }
     chrome.tabs.get(tabId).then((tab) => {
       if (tab.status === 'complete') finish(null, tab);
     }).catch((err) => finish(err));
@@ -803,7 +814,7 @@ function createReportHtml(report) {
 <style>
 :root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
-<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Запросов:</b> ${report.queries.length}</p></header>
+<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : 'Завершён'}</p></header>
 ${rows}
 <footer>Отчёт создан расширением Google Region Monitor. Ссылки на результаты открываются в новых вкладках.</footer></body></html>`;
 }
@@ -812,19 +823,27 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 async function navigateTabAndExtract(tabId, url) {
   await chrome.tabs.update(tabId, { url, active: false });
-  await waitForTabComplete(tabId, 35000);
-  await sleep(900);
+  const loadResult = await waitForTabComplete(tabId, 35000, stopSignalPromise);
+  if (stopRequested || loadResult?.cancelled) return { cancelled: true, results: [] };
+  await Promise.race([sleep(900), stopSignalPromise]);
+  if (stopRequested) return { cancelled: true, results: [] };
   const [injection] = await chrome.scripting.executeScript({ target: { tabId }, func: extractGoogleResults });
   return injection?.result || { blocked: true, reason: 'Не удалось прочитать страницу Google.', results: [] };
 }
 
+$('stop-monitor').addEventListener('click', () => {
+  if (!isRunning || stopRequested) return;
+  stopRequested = true;
+  stopSignalResolver?.();
+  $('stop-monitor').disabled = true;
+  setStatus($('run-status'), 'Останавливаю мониторинг. Отчёт будет сформирован по уже собранным результатам…');
+  addLog('Получена команда остановки. Текущая незавершённая страница не будет добавлена в отчёт.');
+});
+
 $('run-report').addEventListener('click', async () => {
   if (isRunning) return;
-  // Сначала сохранить правки в редакторе профилей.
-  try { readProfileFromForm(); await persistProfiles(); } catch (_) {}
-  renderProfileSelectors();
-  renderMonitorQueries();
-  const profile = getProfileByKey(monitorProfileKey || $('monitor-profile').value);
+  // Do not rebuild the query list here: its checkboxes are the user's selection for this run.
+  const profile = getProfileByKey($('monitor-profile').value || monitorProfileKey);
   if (!profile) {
     setStatus($('run-status'), 'Выберите профиль.', 'error');
     return;
@@ -840,8 +859,12 @@ $('run-report').addEventListener('click', async () => {
   const periodLabel = $('period').selectedOptions[0].textContent;
   const totalSteps = queryList.length * maxPages;
   let completedSteps = 0;
+  let stoppedByUser = false;
+  stopRequested = false;
+  stopSignalPromise = new Promise((resolve) => { stopSignalResolver = resolve; });
   isRunning = true;
   $('run-report').disabled = true;
+  $('stop-monitor').disabled = false;
   $('run-log').replaceChildren();
   $('progress-bar').style.width = '0%';
   setStatus($('run-status'), `Запуск: ${queryList.length} запрос(ов), до ${maxPages} страниц на запрос…`);
@@ -850,13 +873,16 @@ $('run-report').addEventListener('click', async () => {
     profile: { ...profile },
     periodLabel,
     createdAt: new Date().toLocaleString('ru-RU'),
-    queries: []
+    queries: [],
+    selectedQueryCount: queryList.length,
+    stoppedByUser: false
   };
   try {
     const firstUrl = createSearchUrl(queryList[0], profile, period, 0);
     const tab = await chrome.tabs.create({ url: firstUrl, active: false });
     tabId = tab.id;
     for (let queryIndex = 0; queryIndex < queryList.length; queryIndex++) {
+      if (stopRequested) { stoppedByUser = true; break; }
       const query = queryList[queryIndex];
       const queryReport = { query, pages: [], error: '' };
       report.queries.push(queryReport);
@@ -864,10 +890,16 @@ $('run-report').addEventListener('click', async () => {
       let nextUrl = createSearchUrl(query, profile, period, 0);
       const visited = new Set();
       for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
+        if (stopRequested) { stoppedByUser = true; break; }
         if (visited.has(nextUrl)) break;
         visited.add(nextUrl);
         try {
           const data = await navigateTabAndExtract(tabId, nextUrl);
+          if (data.cancelled || stopRequested) {
+            stoppedByUser = true;
+            addLog('Мониторинг остановлен. Формирую отчёт по ранее собранным страницам.');
+            break;
+          }
           completedSteps++;
           $('progress-bar').style.width = `${Math.min(100, completedSteps / totalSteps * 100)}%`;
           if (data.blocked) {
@@ -877,6 +909,7 @@ $('run-report').addEventListener('click', async () => {
           }
           queryReport.pages.push(data);
           addLog(`  Страница ${pageIndex + 1}: найдено результатов — ${data.results.length}`);
+          if (stopRequested) { stoppedByUser = true; break; }
           if (!data.results.length) break;
           if (pageIndex + 1 >= maxPages) break;
           if (data.nextUrl) nextUrl = data.nextUrl;
@@ -889,7 +922,7 @@ $('run-report').addEventListener('click', async () => {
           } else {
             break;
           }
-          await sleep(1400);
+          await Promise.race([sleep(1400), stopSignalPromise]);
         } catch (error) {
           queryReport.error = error.message || String(error);
           addLog(`Ошибка: ${queryReport.error}`);
@@ -897,6 +930,8 @@ $('run-report').addEventListener('click', async () => {
         }
       }
     }
+    stoppedByUser = stoppedByUser || stopRequested;
+    report.stoppedByUser = stoppedByUser;
     const html = createReportHtml(report);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const objectUrl = URL.createObjectURL(blob);
@@ -908,8 +943,12 @@ $('run-report').addEventListener('click', async () => {
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
-    $('progress-bar').style.width = '100%';
-    setStatus($('run-status'), `Готово. HTML-отчёт сформирован: ${report.queries.reduce((sum, q) => sum + q.pages.reduce((s, p) => s + p.results.length, 0), 0)} результатов.`, 'success');
+    if (!stoppedByUser) $('progress-bar').style.width = '100%';
+    const totalResults = report.queries.reduce((sum, q) => sum + q.pages.reduce((s, p) => s + p.results.length, 0), 0);
+    const reportMessage = stoppedByUser
+      ? `Остановлено. Отчёт сформирован по уже собранным результатам: ${totalResults}.`
+      : `Готово. HTML-отчёт сформирован: ${totalResults} результатов.`;
+    setStatus($('run-status'), reportMessage, 'success');
   } catch (error) {
     setStatus($('run-status'), error.message || String(error), 'error');
   } finally {
@@ -932,7 +971,11 @@ $('run-report').addEventListener('click', async () => {
       }
     }
     isRunning = false;
+    stopRequested = false;
+    stopSignalResolver = null;
+    stopSignalPromise = null;
     $('run-report').disabled = false;
+    $('stop-monitor').disabled = true;
   }
 });
 

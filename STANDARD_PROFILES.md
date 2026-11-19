@@ -2,7 +2,7 @@
 
 По умолчанию расширение читает:
 
-`https://raw.githubusercontent.com/OWNER/REPOSITORY/main/config/standard-profiles.json`
+`https://raw.githubusercontent.com/artemmalkin/Google-Region-Monitor/master/config/standard-profiles.json`
 
 ## Формат файла
 

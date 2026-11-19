@@ -173,7 +173,10 @@
       </div>
 
       <div class="run-box">
-        <button id="run-report" class="button button-primary button-large" type="button">Сформировать отчёт</button>
+        <div class="run-actions">
+          <button id="run-report" class="button button-primary button-large" type="button">Сформировать отчёт</button>
+          <button id="stop-monitor" class="button button-secondary button-large" type="button" disabled>Остановить</button>
+        </div>
         <div id="run-status" class="run-status" role="status">Готово к запуску.</div>
         <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
         <div id="run-log" class="run-log" aria-live="polite"></div>
@@ -183,7 +186,7 @@
 
   <footer>
     <span>Данные профилей хранятся локально в Chrome.</span>
-    <span id="app-version">v1.4.2</span>
+    <span id="app-version">v1.4.3</span>
   </footer>
 
   <script src="github-config.js"></script>
