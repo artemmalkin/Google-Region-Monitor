@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-19T00:00:00.000Z",
+  "updatedAt": "2026-11-19T19:59:35.654Z",
   "profiles": [
     {
       "id": "vietnam",
@@ -11,6 +11,16 @@
       "queries": [
         "rosatom",
         "\"rosatom\" AND \"rooppur\""
+      ]
+    },
+    {
+      "id": "vetnam",
+      "name": "Вьетнам",
+      "interfaceLang": "vi",
+      "resultLangs": "vi, en",
+      "region": "VN",
+      "queries": [
+        "\"rosatom\""
       ]
     }
   ]
