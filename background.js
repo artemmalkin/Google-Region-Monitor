@@ -1,3 +1,4 @@
+importScripts('github-config.js');
 const STANDARD_SYNC_ALARM = 'google-region-monitor-standard-profiles-daily';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,9 +35,10 @@ async function ensureDailySyncAlarm() {
   }
 }
 function validateSyncSettings(settings) {
-  const repo = String(settings.githubRepo || '').trim();
-  const branch = String(settings.standardConfigBranch || 'main').trim();
-  const path = String(settings.standardConfigPath || 'config/standard-profiles.json').trim();
+  const cfg = globalThis.GITHUB_CONFIG || {};
+  const repo = `${String(cfg.owner || '').trim()}/${String(cfg.repository || '').trim()}`;
+  const branch = String(cfg.branch || 'main').trim();
+  const path = String(cfg.standardProfilesPath || 'config/standard-profiles.json').trim();
   if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(repo)) throw new Error('В настройках не задан GitHub-репозиторий owner/repository.');
   if (!branch || branch.includes('..')) throw new Error('Некорректная ветка GitHub.');
   if (!path || path.startsWith('/') || path.split('/').includes('..')) throw new Error('Некорректный путь к JSON-конфигурации.');
@@ -60,7 +62,6 @@ function normalizeRemoteProfile(raw, index) {
 }
 async function syncStandardProfiles(force = false) {
   const stored = await chrome.storage.local.get({
-    githubRepo: '', standardConfigBranch: 'main', standardConfigPath: 'config/standard-profiles.json',
     lastStandardSyncAt: 0, lastStandardSyncSource: '', standardProfiles: []
   });
   let settings;

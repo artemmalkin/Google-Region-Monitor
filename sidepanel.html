@@ -91,27 +91,11 @@
 
       <div class="card update-card">
         <h3>Стандартные профили из GitHub</h3>
-        <label class="field-label" for="github-repo">Публичный репозиторий GitHub</label>
-        <input id="github-repo" type="text" placeholder="owner/repository">
-        <div class="field-row">
-          <div>
-            <label class="field-label" for="github-branch">Ветка</label>
-            <input id="github-branch" type="text" value="main" placeholder="main">
-          </div>
-          <div>
-            <label class="field-label" for="standard-config-path">Путь к JSON</label>
-            <input id="standard-config-path" type="text" value="config/standard-profiles.json" placeholder="config/standard-profiles.json">
-          </div>
-        </div>
-        <p class="field-help">По этому пути расширение ежедневно загружает JSON со стандартными профилями. Пользовательские профили и копии стандартных остаются локальными.</p>
-        <div class="button-row">
-          <button id="sync-standard-profiles" class="button button-primary button-compact" type="button">Обновить стандартные профили</button>
-          <button id="publish-profile" class="button button-secondary button-compact" type="button">Добавить мой профиль в GitHub</button>
-          <button id="download-standard-config" class="button button-secondary button-compact" type="button">Скачать JSON стандартных</button>
-        </div>
-        <label class="field-label" for="github-token">GitHub Fine-grained token (для прямой публикации)</label>
+        <p class="field-help">Стандартные профили автоматически синхронизируются раз в день. Ручная синхронизация выполняется кнопкой «Проверить обновление». Настройки репозитория задаются в github-config.js.</p>
+        <label class="field-label" for="github-token">GitHub Fine-grained token (для публикации профиля)</label>
         <input id="github-token" type="password" autocomplete="off" placeholder="github_pat_…">
         <p class="field-help">Нужен только для записи в репозиторий: Contents → Read and write. Токен сохраняется локально в Chrome; не добавляйте его в конфигурацию или GitHub.</p>
+        <div class="button-row"><button id="publish-profile" class="button button-secondary button-compact" type="button" hidden>Добавить мой профиль в GitHub</button></div>
         <div id="standard-sync-status" class="inline-status" role="status"></div>
       </div>
 
@@ -190,6 +174,7 @@
     <span id="app-version">v1.2.0</span>
   </footer>
 
+  <script src="github-config.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>

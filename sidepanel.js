@@ -819,28 +819,30 @@ function isVersionNewer(candidate, current) {
   }
   return false;
 }
-function getGitHubSettingsFromUi() {
-  const repo = $('github-repo').value.trim().replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/i, '').replace(/\/$/, '');
-  const branch = $('github-branch').value.trim() || 'main';
-  const path = $('standard-config-path').value.trim() || 'config/standard-profiles.json';
-  const token = $('github-token').value.trim();
-  return { repo, branch, path, token };
+function getGitHubSettingsFromConfig(token = '') {
+  const cfg = globalThis.GITHUB_CONFIG || {};
+  const repo = `${String(cfg.owner || '').trim()}/${String(cfg.repository || '').trim()}`;
+  const branch = String(cfg.branch || 'main').trim();
+  const path = String(cfg.standardProfilesPath || 'config/standard-profiles.json').trim();
+  return { repo, branch, path, token: String(token || '').trim() };
 }
+async function getGitHubSettings() {
+  const stored = await chrome.storage.local.get({ githubToken: '' });
+  return getGitHubSettingsFromConfig(stored.githubToken);
+}
+async function saveGitHubToken() {
+  const token = $('github-token').value.trim();
+  await chrome.storage.local.set({ githubToken: token });
+  $('publish-profile').hidden = !token;
+  return token;
+}
+
 function validGitHubSettings({ repo, branch, path }) {
   return /^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(repo)
     && !!branch && !branch.includes('..')
     && !!path && !path.startsWith('/') && !path.split('/').includes('..');
 }
-async function saveGitHubSettings() {
-  const settings = getGitHubSettingsFromUi();
-  await chrome.storage.local.set({
-    githubRepo: settings.repo,
-    standardConfigBranch: settings.branch,
-    standardConfigPath: settings.path,
-    githubToken: settings.token
-  });
-  return settings;
-}
+
 async function refreshProfilesFromStorage() {
   const stored = await chrome.storage.local.get({ standardProfiles: [] });
   standardProfiles = Array.isArray(stored.standardProfiles) ? stored.standardProfiles.map((p) => ({ ...p, profileType: 'standard' })) : [];
@@ -852,7 +854,7 @@ async function refreshProfilesFromStorage() {
   renderMonitorQueries();
 }
 async function requestStandardSync(force = true, silent = false) {
-  const settings = await saveGitHubSettings();
+  const settings = await getGitHubSettings();
   const status = $('standard-sync-status');
   if (!validGitHubSettings(settings)) {
     if (!silent) setStatus(status, 'Укажите репозиторий, ветку и путь к JSON-файлу стандартных профилей.', 'error');
@@ -869,24 +871,29 @@ async function requestStandardSync(force = true, silent = false) {
     return result;
   } catch (error) {
     if (!silent) setStatus(status, error.message || String(error), 'error');
-    return null;
+    return { ok: false, error: error.message || String(error) };
   }
 }
 
-$('sync-standard-profiles').addEventListener('click', () => requestStandardSync(true, false));
-$('github-repo').addEventListener('change', () => saveGitHubSettings().catch(() => {}));
-$('github-branch').addEventListener('change', () => saveGitHubSettings().catch(() => {}));
-$('standard-config-path').addEventListener('change', () => saveGitHubSettings().catch(() => {}));
-$('github-token').addEventListener('change', () => saveGitHubSettings().catch(() => {}));
+$('github-token').addEventListener('input', () => {
+  $('publish-profile').hidden = !$('github-token').value.trim();
+});
+$('github-token').addEventListener('change', () => saveGitHubToken().catch(() => {}));
 
 async function checkGitHubUpdates(silent = false) {
-  const settings = await saveGitHubSettings();
+  const settings = await getGitHubSettings();
   const status = $('update-status');
+  // One action checks the extension release and refreshes standard profiles.
+  const syncResult = await requestStandardSync(!silent, true);
+  if (!silent) {
+    if (syncResult?.ok) setStatus($('standard-sync-status'), syncResult.skipped ? 'Стандартные профили уже актуальны.' : `Стандартные профили обновлены: ${syncResult.count}.`, 'success');
+    else if (syncResult?.error) setStatus($('standard-sync-status'), `Не удалось обновить стандартные профили: ${syncResult.error}`, 'error');
+  }
   $('download-update').hidden = true;
   latestUpdateUrl = '';
   latestUpdateVersion = '';
   if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(settings.repo)) {
-    if (!silent) setStatus(status, 'Укажите публичный репозиторий в формате owner/repository.', 'error');
+    if (!silent) setStatus(status, 'Проверьте owner и repository в файле github-config.js.', 'error');
     return;
   }
   if (!silent) setStatus(status, 'Проверяю последнюю версию на GitHub…');
@@ -989,18 +996,14 @@ function decodeBase64Utf8(value) {
 }
 
 async function publishUserProfileToGitHub(profile) {
-  const settings = await saveGitHubSettings();
+  const settings = await getGitHubSettings();
   if (!validGitHubSettings(settings)) throw new Error('Сначала заполните репозиторий, ветку и путь к файлу стандартных профилей.');
   // Always refresh before modifying the remote config, so we don't overwrite a newer list.
   const syncResult = await requestStandardSync(true, true);
   if (!syncResult?.ok) throw new Error('Сначала синхронизируйте стандартные профили из GitHub.');
   const standardId = getStandardIdForUserProfile(profile, standardProfiles);
-  const config = makeStandardConfig(profile);
 
-  if (!settings.token) {
-    downloadJsonFile(config, 'standard-profiles.json');
-    return { manual: true, id: standardId };
-  }
+  if (!settings.token) throw new Error('Для публикации профиля заполните GitHub Fine-grained token.');
 
   const apiUrl = `https://api.github.com/repos/${settings.repo}/contents/${settings.path.split('/').map(encodeURIComponent).join('/')}`;
   const headers = {
@@ -1056,40 +1059,31 @@ $('publish-profile').addEventListener('click', async () => {
     profile = readProfileFromForm();
     await persistProfiles();
     if (!profile || profile.profileType === 'standard') throw new Error('Сначала сохраните изменения как пользовательскую копию.');
+    await saveGitHubToken();
+    const settings = await getGitHubSettings();
+    if (!settings.token) throw new Error('Для публикации профиля заполните GitHub Fine-grained token.');
     setStatus($('standard-sync-status'), 'Добавляю профиль в стандартную конфигурацию GitHub…');
     const result = await publishUserProfileToGitHub(profile);
     profile.publishedStandardId = result?.id || result;
     await persistProfiles();
-    if (result?.manual) {
-      setStatus($('standard-sync-status'), `Файл JSON скачан с профилем «${result.id}». Загрузите его в GitHub. При следующих публикациях будет обновляться эта же запись.`, 'success');
-    } else {
-      await requestStandardSync(true, true);
-      setStatus($('standard-sync-status'), `Профиль опубликован в GitHub как «${result}». Стандартный список обновлён.`, 'success');
-    }
+    await requestStandardSync(true, true);
+    setStatus($('standard-sync-status'), `Профиль опубликован в GitHub как «${result}». Стандартный список обновлён.`, 'success');
   } catch (error) {
     setStatus($('standard-sync-status'), error.message || String(error), 'error');
   }
 });
-$('download-standard-config').addEventListener('click', () => {
-  let profile = selectedProfile();
-  try { profile = readProfileFromForm(); } catch (_) {}
-  if (profile?.profileType === 'standard') {
-    setStatus($('standard-sync-status'), 'Чтобы добавить стандартный профиль в конфигурацию, сначала измените его или создайте пользовательскую копию.', 'error');
-    return;
-  }
-  downloadJsonFile(makeStandardConfig(profile || null), 'standard-profiles.json');
-  setStatus($('standard-sync-status'), 'JSON-конфигурация скачана. Загрузите её в GitHub по указанному пути.', 'success');
-});
+
 
 async function initializeGitHubFeatures() {
-  const stored = await chrome.storage.local.get({ githubRepo: '', standardConfigBranch: 'main', standardConfigPath: 'config/standard-profiles.json', githubToken: '' });
-  $('github-repo').value = stored.githubRepo || '';
-  $('github-branch').value = stored.standardConfigBranch || 'main';
-  $('standard-config-path').value = stored.standardConfigPath || 'config/standard-profiles.json';
+  const stored = await chrome.storage.local.get({ githubToken: '' });
   $('github-token').value = stored.githubToken || '';
-  if (stored.githubRepo) {
-    await requestStandardSync(false, false);
+  $('publish-profile').hidden = !String(stored.githubToken || '').trim();
+  const settings = await getGitHubSettings();
+  if (validGitHubSettings(settings)) {
+    await requestStandardSync(false, true);
     await checkGitHubUpdates(true);
+  } else {
+    setStatus($('standard-sync-status'), 'Настройте owner и repository в файле github-config.js.', 'error');
   }
 }
 
