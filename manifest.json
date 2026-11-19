@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Google Region Monitor",
+  "version": "1.2.0",
+  "description": "GitHub-синхронизация стандартных профилей, локальные профили, мониторинг выдачи Google и HTML-отчёты.",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "scripting",
+    "activeTab",
+    "tabs",
+    "downloads",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://www.google.com/*",
+    "https://api.github.com/*",
+    "https://raw.githubusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Открыть Google Region Monitor"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  }
+}

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Google Region Monitor</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-mark">G</div>
+    <div class="brand-copy">
+      <h1>Google Region Monitor</h1>
+      <p>Профили поиска и мониторинг выдачи</p>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Разделы">
+    <button class="tab active" data-tab="profiles">Профили</button>
+    <button class="tab" data-tab="monitor">Мониторинг</button>
+  </nav>
+
+  <main>
+    <section id="profiles-panel" class="panel active">
+      <div class="section-heading">
+        <div>
+          <h2>Профили регионов</h2>
+          <p>Сохраните язык Google, язык результатов и регион поиска.</p>
+        </div>
+        <button id="new-profile" class="button button-secondary button-compact" type="button">+ Профиль</button>
+      </div>
+
+      <label class="field-label" for="profile-select">Выбранный профиль</label>
+      <div class="profile-select-row">
+        <select id="profile-select"></select>
+        <button id="delete-profile" class="icon-button danger" type="button" title="Удалить профиль" aria-label="Удалить профиль">×</button>
+      </div>
+      <p id="profile-kind" class="field-help profile-kind">Стандартные профили загружаются из GitHub; пользовательские хранятся локально.</p>
+      <div class="profile-file-actions">
+        <button id="export-profile" class="button button-secondary button-compact" type="button">Экспорт профиля</button>
+        <button id="import-profile" class="button button-secondary button-compact" type="button">Импорт из файла</button>
+        <input id="profile-import-file" type="file" accept="application/json,.json" hidden>
+      </div>
+
+      <div class="card">
+        <label class="field-label" for="profile-name">Название профиля</label>
+        <input id="profile-name" type="text" placeholder="Например, Вьетнам">
+
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="interface-lang">Язык интерфейса (hl)</label>
+            <input id="interface-lang" type="text" placeholder="vi">
+            <p class="field-help">Код языка, например vi, en, ru.</p>
+          </div>
+          <div>
+            <label class="field-label" for="search-region">Регион поиска (gl)</label>
+            <input id="search-region" type="text" placeholder="VN">
+            <p class="field-help">Код страны, например VN, DE, NL.</p>
+          </div>
+        </div>
+
+        <label class="field-label" for="results-langs">Фильтрация результатов по языку</label>
+        <input id="results-langs" type="text" placeholder="vi, en">
+        <p class="field-help">Один или несколько кодов языков через запятую. Оставьте пустым, чтобы не ограничивать язык выдачи.</p>
+
+        <div class="capture-box">
+          <div class="capture-copy">
+            <strong>Считать настройки с Google</strong>
+            <span>Откройте Google Preferences, выставьте параметры и нажмите кнопку.</span>
+          </div>
+          <button id="capture-settings" class="button button-secondary" type="button">Считать текущие</button>
+        </div>
+        <div class="button-row">
+          <button id="open-preferences" class="text-button" type="button">Открыть Google Preferences ↗</button>
+          <button id="apply-settings" class="text-button" type="button">Применить в Google ↗</button>
+        </div>
+        <div id="capture-status" class="inline-status" role="status"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-heading compact-heading">
+          <div>
+            <h3>Поисковые запросы</h3>
+            <p>Каждая строка — отдельный запрос Google.</p>
+          </div>
+          <span id="query-count" class="count-pill">0</span>
+        </div>
+        <textarea id="queries" rows="7" placeholder='rosatom&#10;"rosatom" AND "rooppur"'></textarea>
+        <p class="field-help">Можно использовать операторы Google: AND, OR, кавычки, минус-слова и т. д.</p>
+      </div>
+
+      <div class="card update-card">
+        <h3>Стандартные профили из GitHub</h3>
+        <label class="field-label" for="github-repo">Публичный репозиторий GitHub</label>
+        <input id="github-repo" type="text" placeholder="owner/repository">
+        <div class="field-row">
+          <div>
+            <label class="field-label" for="github-branch">Ветка</label>
+            <input id="github-branch" type="text" value="main" placeholder="main">
+          </div>
+          <div>
+            <label class="field-label" for="standard-config-path">Путь к JSON</label>
+            <input id="standard-config-path" type="text" value="config/standard-profiles.json" placeholder="config/standard-profiles.json">
+          </div>
+        </div>
+        <p class="field-help">По этому пути расширение ежедневно загружает JSON со стандартными профилями. Пользовательские профили и копии стандартных остаются локальными.</p>
+        <div class="button-row">
+          <button id="sync-standard-profiles" class="button button-primary button-compact" type="button">Обновить стандартные профили</button>
+          <button id="publish-profile" class="button button-secondary button-compact" type="button">Добавить мой профиль в GitHub</button>
+          <button id="download-standard-config" class="button button-secondary button-compact" type="button">Скачать JSON стандартных</button>
+        </div>
+        <label class="field-label" for="github-token">GitHub Fine-grained token (для прямой публикации)</label>
+        <input id="github-token" type="password" autocomplete="off" placeholder="github_pat_…">
+        <p class="field-help">Нужен только для записи в репозиторий: Contents → Read and write. Токен сохраняется локально в Chrome; не добавляйте его в конфигурацию или GitHub.</p>
+        <div id="standard-sync-status" class="inline-status" role="status"></div>
+      </div>
+
+      <div class="card update-card">
+        <h3>Обновление самого расширения</h3>
+        <p class="field-help">Проверка последнего GitHub Release и загрузка ZIP. Для распакованной версии Chrome потребуется ручная перезагрузка после скачивания.</p>
+        <div class="button-row">
+          <button id="check-updates" class="button button-secondary button-compact" type="button">Проверить обновление</button>
+          <button id="download-update" class="button button-primary button-compact" type="button" hidden>Скачать обновление</button>
+        </div>
+        <div id="update-status" class="inline-status" role="status"></div>
+      </div>
+
+      <div class="sticky-actions">
+        <button id="save-profile" class="button button-primary" type="button">Сохранить профиль</button>
+        <span id="save-status" class="save-status" role="status"></span>
+      </div>
+    </section>
+
+    <section id="monitor-panel" class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Мониторинг</h2>
+          <p>Соберите выдачу Google и сформируйте единый HTML-отчёт.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="field-label" for="monitor-profile">Профиль региона</label>
+        <select id="monitor-profile"></select>
+
+        <div class="section-heading compact-heading query-heading">
+          <div>
+            <h3>Запросы для отчёта</h3>
+            <p>Выберите все или только нужные.</p>
+          </div>
+          <div class="link-buttons">
+            <button id="select-all-queries" class="text-button" type="button">Все</button>
+            <button id="clear-queries" class="text-button" type="button">Снять</button>
+          </div>
+        </div>
+        <div id="monitor-query-list" class="query-list empty-state">Сначала добавьте запросы в профиле.</div>
+
+        <label class="field-label" for="period">Период поиска</label>
+        <select id="period">
+          <option value="h">За последний час</option>
+          <option value="d" selected>За последние 24 часа</option>
+          <option value="w">За последнюю неделю</option>
+          <option value="m">За последний месяц</option>
+          <option value="y">За последний год</option>
+          <option value="all">За всё время</option>
+        </select>
+
+        <label class="field-label" for="max-pages">Максимум страниц на запрос</label>
+        <select id="max-pages">
+          <option value="1">1 страница</option>
+          <option value="2">2 страницы</option>
+          <option value="3" selected>3 страницы</option>
+          <option value="5">5 страниц</option>
+          <option value="10">10 страниц</option>
+        </select>
+        <p class="field-help">Сбор идёт последовательно с паузой между страницами. CAPTCHA и страницы согласия не обходятся.</p>
+      </div>
+
+      <div class="run-box">
+        <button id="run-report" class="button button-primary button-large" type="button">Сформировать отчёт</button>
+        <div id="run-status" class="run-status" role="status">Готово к запуску.</div>
+        <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
+        <div id="run-log" class="run-log" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Данные профилей хранятся локально в Chrome.</span>
+    <span id="app-version">v1.2.0</span>
+  </footer>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
