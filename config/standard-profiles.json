@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-20T07:05:53.516Z",
+  "updatedAt": "2026-11-20T07:10:47.306Z",
   "profiles": [
     {
       "id": "vietnam",
@@ -10,6 +10,16 @@
       "region": "VN",
       "queries": [
         "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+      ]
+    },
+    {
+      "id": "indoneziya",
+      "name": "Индонезия",
+      "interfaceLang": "id",
+      "resultLangs": "id",
+      "region": "ID",
+      "queries": [
+        "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
       ]
     }
   ]
