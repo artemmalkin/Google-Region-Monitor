@@ -1,16 +1,35 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-19T00:00:00.000Z",
+  "updatedAt": "2026-11-20T08:21:23.110Z",
   "profiles": [
     {
       "id": "vietnam",
       "name": "Вьетнам",
       "interfaceLang": "vi",
-      "resultLangs": "vi, en",
+      "resultLangs": "vi",
       "region": "VN",
       "queries": [
-        "rosatom",
-        "\"rosatom\" AND \"rooppur\""
+        "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+      ]
+    },
+    {
+      "id": "indoneziya",
+      "name": "Индонезия",
+      "interfaceLang": "id",
+      "resultLangs": "id",
+      "region": "ID",
+      "queries": [
+        "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+      ]
+    },
+    {
+      "id": "kitai",
+      "name": "Китай",
+      "interfaceLang": "zh-CN",
+      "resultLangs": "zh-CN",
+      "region": "HK",
+      "queries": [
+        "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
       ]
     }
   ]
