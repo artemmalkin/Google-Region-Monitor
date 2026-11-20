@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-20T08:17:35.373Z",
+  "updatedAt": "2026-11-20T08:18:52.076Z",
   "profiles": [
     {
       "id": "vietnam",
@@ -29,7 +29,7 @@
       "resultLangs": "zh-CN",
       "region": "HK",
       "queries": [
-        "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com"
+        "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
       ]
     },
     {
