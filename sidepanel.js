@@ -709,6 +709,9 @@ function createSearchUrl(query, profile, period, start = 0) {
   const url = new URL('https://www.google.com/search');
   url.searchParams.set('q', query);
   url.searchParams.set('num', '10');
+  // Ask Google to include results it would otherwise omit as very similar/duplicates.
+  // Keep this on every page because Google's pagination URLs may not preserve it.
+  url.searchParams.set('filter', '0');
   if (start) url.searchParams.set('start', String(start));
   if (profile.interfaceLang) url.searchParams.set('hl', profile.interfaceLang.trim());
   if (profile.region) url.searchParams.set('gl', profile.region.trim().toUpperCase());
@@ -718,6 +721,12 @@ function createSearchUrl(query, profile, period, start = 0) {
     url.searchParams.set('lr', codes.join('|'));
   }
   if (period !== 'all') url.searchParams.set('tbs', `qdr:${period}`);
+  return url.toString();
+}
+
+function includeSimilarResults(urlValue) {
+  const url = new URL(urlValue);
+  url.searchParams.set('filter', '0');
   return url.toString();
 }
 
@@ -783,6 +792,7 @@ function extractGoogleResults() {
       hl: pageUrl.searchParams.get('hl') || '',
       gl: pageUrl.searchParams.get('gl') || '',
       lr: pageUrl.searchParams.get('lr') || '',
+      filter: pageUrl.searchParams.get('filter') || '',
       tbs: pageUrl.searchParams.get('tbs') || ''
     },
     results,
@@ -814,7 +824,7 @@ function createReportHtml(report) {
 <style>
 :root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
-<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : 'Завершён'}</p></header>
+<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : 'Завершён'}</p></header>
 ${rows}
 <footer>Отчёт создан расширением Google Region Monitor. Ссылки на результаты открываются в новых вкладках.</footer></body></html>`;
 }
@@ -868,6 +878,7 @@ $('run-report').addEventListener('click', async () => {
   $('run-log').replaceChildren();
   $('progress-bar').style.width = '0%';
   setStatus($('run-status'), `Запуск: ${queryList.length} запрос(ов), до ${maxPages} страниц на запрос…`);
+  addLog('Включён показ похожих результатов Google (filter=0); параметр сохраняется при переходе между страницами.');
   let tabId = null;
   const report = {
     profile: { ...profile },
@@ -912,7 +923,7 @@ $('run-report').addEventListener('click', async () => {
           if (stopRequested) { stoppedByUser = true; break; }
           if (!data.results.length) break;
           if (pageIndex + 1 >= maxPages) break;
-          if (data.nextUrl) nextUrl = data.nextUrl;
+          if (data.nextUrl) nextUrl = includeSimilarResults(data.nextUrl);
           else if (data.results.length >= 10) {
             // Запасной путь, если Google изменил разметку ссылки пагинации.
             const parsed = new URL(nextUrl);
