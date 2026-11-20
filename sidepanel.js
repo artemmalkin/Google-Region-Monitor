@@ -601,6 +601,22 @@ const GOOGLE_PREFERENCES_URL = 'https://www.google.com/preferences?lang=1';
 function isGooglePreferencesTab(tab) {
   return /^https:\/\/(?:www\.)?google\.com\/preferences(?:[/?#]|$)/i.test(tab?.url || '');
 }
+
+// Every tab opened or navigated by the extension is activated and its Chrome
+// window is brought to the foreground. This is intentional: Google Preferences
+// does not reliably commit changes from a background tab.
+async function activateAndFocusTab(tabOrId) {
+  const tabId = typeof tabOrId === 'number' ? tabOrId : tabOrId?.id;
+  if (!tabId) throw new Error('Не удалось определить вкладку для активации.');
+  let tab = await chrome.tabs.get(tabId);
+  await chrome.tabs.update(tabId, { active: true });
+  if (tab.windowId !== undefined) {
+    try { await chrome.windows.update(tab.windowId, { focused: true }); }
+    catch (_) { /* Chrome may restrict focusing a window; the tab is still activated. */ }
+  }
+  return await chrome.tabs.get(tabId);
+}
+
 async function focusGooglePreferencesTab() {
   const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const allTabs = await chrome.tabs.query({});
@@ -612,23 +628,16 @@ async function focusGooglePreferencesTab() {
       || null;
   }
   if (tab?.id) {
-    tab = await chrome.tabs.update(tab.id, { active: true });
+    tab = await activateAndFocusTab(tab.id);
   } else {
     const createOptions = { url: GOOGLE_PREFERENCES_URL, active: true };
     if (activeTab?.windowId) createOptions.windowId = activeTab.windowId;
     tab = await chrome.tabs.create(createOptions);
-  }
-  if (tab?.windowId !== undefined) {
-    try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (_) { /* tab activation remains sufficient when window focus is restricted */ }
+    tab = await activateAndFocusTab(tab.id);
   }
   await waitForTabComplete(tab.id, 25000);
-  tab = await chrome.tabs.get(tab.id);
-  // Explicitly reactivate after navigation completes: Google can briefly re-render the tab.
-  await chrome.tabs.update(tab.id, { active: true });
-  if (tab.windowId !== undefined) {
-    try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (_) {}
-  }
-  return await chrome.tabs.get(tab.id);
+  // Reactivate after navigation: Google can briefly re-render the page.
+  return await activateAndFocusTab(tab.id);
 }
 async function applySettingsInFocusedPreferencesTab(settings) {
   const tab = await focusGooglePreferencesTab();
@@ -638,14 +647,11 @@ async function applySettingsInFocusedPreferencesTab(settings) {
     args: [{ interfaceLang: settings.interfaceLang || '', resultLangs: settings.resultLangs || '', region: settings.region || '' }]
   });
   // Interface-language changes can trigger a full navigation. Wait for it before
-  // reactivating Preferences so the final Google page is the focused tab.
+  // reactivating Preferences so the final Google page is still the focused tab.
   await waitForTabComplete(tab.id, 15000);
   await sleep(250);
-  try {
-    await chrome.tabs.update(tab.id, { active: true });
-    if (tab.windowId !== undefined) await chrome.windows.update(tab.windowId, { focused: true });
-  } catch (_) {}
-  return { tab: await chrome.tabs.get(tab.id), result: injection?.result || {} };
+  const focusedTab = await activateAndFocusTab(tab.id);
+  return { tab: focusedTab, result: injection?.result || {} };
 }
 
 async function waitForTabComplete(tabId, timeoutMs = 30000, cancelPromise = null) {
@@ -679,15 +685,21 @@ async function waitForTabComplete(tabId, timeoutMs = 30000, cancelPromise = null
   });
 }
 
-$('monitor-profile').addEventListener('change', async (event) => {
-  monitorProfileKey = event.target.value;
-  await chrome.storage.local.set({ monitorProfileKey });
-  renderMonitorQueries();
+$('monitor-profile').addEventListener('change', (event) => {
+  const nextKey = event.target.value;
+  monitorProfileKey = getProfileByKey(nextKey) ? nextKey : null;
+  // Rebuild synchronously before the browser can process a subsequent Run click.
+  renderMonitorQueries(monitorProfileKey);
+  chrome.storage.local.set({ monitorProfileKey }).catch((error) => {
+    setStatus($('run-status'), `Не удалось сохранить выбранный профиль мониторинга: ${error.message || error}`, 'error');
+  });
 });
-function renderMonitorQueries() {
-  const profile = getProfileByKey(monitorProfileKey) || selectedProfile();
+function renderMonitorQueries(profileKeyOverride = $('monitor-profile').value || monitorProfileKey) {
+  const key = profileKeyOverride || '';
+  const profile = getProfileByKey(key);
   const container = $('monitor-query-list');
   container.replaceChildren();
+  container.dataset.profileKey = key;
   const queries = profile?.queries || [];
   if (!queries.length) {
     container.textContent = 'В выбранном профиле пока нет запросов.';
@@ -697,7 +709,11 @@ function renderMonitorQueries() {
   container.classList.remove('empty-state');
   queries.forEach((query, index) => {
     const label = document.createElement('label'); label.className = 'query-check';
-    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = true; checkbox.dataset.queryIndex = String(index);
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = true;
+    checkbox.dataset.profileKey = key;
+    checkbox.dataset.queryIndex = String(index);
     const text = document.createElement('span'); text.textContent = query;
     label.append(checkbox, text); container.append(label);
   });
@@ -824,7 +840,7 @@ function createReportHtml(report) {
 <style>
 :root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
-<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : 'Завершён'}</p></header>
+<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Настройки Google Preferences:</b> ${report.preferencesApplied ? 'подтверждены перед началом мониторинга' : 'не подтверждены'}<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : 'Завершён'}</p></header>
 ${rows}
 <footer>Отчёт создан расширением Google Region Monitor. Ссылки на результаты открываются в новых вкладках.</footer></body></html>`;
 }
@@ -832,11 +848,18 @@ ${rows}
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 async function navigateTabAndExtract(tabId, url) {
-  await chrome.tabs.update(tabId, { url, active: false });
+  const currentTab = await chrome.tabs.get(tabId);
+  if (currentTab.url !== url) {
+    await chrome.tabs.update(tabId, { url, active: true });
+  }
+  await activateAndFocusTab(tabId);
   const loadResult = await waitForTabComplete(tabId, 35000, stopSignalPromise);
   if (stopRequested || loadResult?.cancelled) return { cancelled: true, results: [] };
+  await activateAndFocusTab(tabId);
   await Promise.race([sleep(900), stopSignalPromise]);
   if (stopRequested) return { cancelled: true, results: [] };
+  // Bring the search page to the foreground immediately before reading it too.
+  await activateAndFocusTab(tabId);
   const [injection] = await chrome.scripting.executeScript({ target: { tabId }, func: extractGoogleResults });
   return injection?.result || { blocked: true, reason: 'Не удалось прочитать страницу Google.', results: [] };
 }
@@ -852,46 +875,105 @@ $('stop-monitor').addEventListener('click', () => {
 
 $('run-report').addEventListener('click', async () => {
   if (isRunning) return;
-  // Do not rebuild the query list here: its checkboxes are the user's selection for this run.
-  const profile = getProfileByKey($('monitor-profile').value || monitorProfileKey);
-  if (!profile) {
-    setStatus($('run-status'), 'Выберите профиль.', 'error');
+
+  // Snapshot the exact profile selected in the Monitoring tab. Never fall back
+  // to the profile selected on the Profiles tab or to a stale in-memory key.
+  const selectedKey = $('monitor-profile').value;
+  const currentProfile = getProfileByKey(selectedKey);
+  if (!selectedKey || !currentProfile) {
+    setStatus($('run-status'), 'Выберите действующий профиль во вкладке «Мониторинг».', 'error');
     return;
   }
-  const selectedBoxes = [...$('monitor-query-list').querySelectorAll('input[type="checkbox"]:checked')];
-  const queryList = selectedBoxes.map((box) => profile.queries[Number(box.dataset.queryIndex)]).filter(Boolean);
+  const queryContainer = $('monitor-query-list');
+  if (queryContainer.dataset.profileKey !== selectedKey) {
+    renderMonitorQueries(selectedKey);
+    setStatus($('run-status'), 'Список запросов обновлён для выбранного профиля. Проверьте флажки и нажмите «Сформировать отчёт» ещё раз.', 'error');
+    return;
+  }
+
+  // Capture immutable profile and query selection before any async operation.
+  const normalizedProfile = profileValues(currentProfile);
+  const profile = { ...currentProfile, ...normalizedProfile, queries: [...normalizedProfile.queries] };
+  const selectedBoxes = [...queryContainer.querySelectorAll('input[type="checkbox"]:checked')];
+  if (selectedBoxes.some((box) => box.dataset.profileKey !== selectedKey)) {
+    renderMonitorQueries(selectedKey);
+    setStatus($('run-status'), 'Список запросов изменился вместе с профилем. Проверьте выбор и запустите отчёт повторно.', 'error');
+    return;
+  }
+  const queryList = selectedBoxes
+    .map((box) => profile.queries[Number(box.dataset.queryIndex)])
+    .filter((query) => typeof query === 'string' && query.trim());
   if (!queryList.length) {
     setStatus($('run-status'), 'Выберите хотя бы один поисковый запрос.', 'error');
     return;
   }
+
   const maxPages = Math.max(1, Math.min(10, Number($('max-pages').value) || 3));
   const period = $('period').value;
   const periodLabel = $('period').selectedOptions[0].textContent;
   const totalSteps = queryList.length * maxPages;
   let completedSteps = 0;
   let stoppedByUser = false;
+  let monitoringStarted = false;
+  let tabId = null;
   stopRequested = false;
   stopSignalPromise = new Promise((resolve) => { stopSignalResolver = resolve; });
   isRunning = true;
   $('run-report').disabled = true;
-  $('stop-monitor').disabled = false;
+  $('stop-monitor').disabled = true; // Enabled only after Preferences are applied.
+  $('monitor-profile').disabled = true;
+  $('select-all-queries').disabled = true;
+  $('clear-queries').disabled = true;
+  queryContainer.querySelectorAll('input[type="checkbox"]').forEach((box) => { box.disabled = true; });
   $('run-log').replaceChildren();
   $('progress-bar').style.width = '0%';
-  setStatus($('run-status'), `Запуск: ${queryList.length} запрос(ов), до ${maxPages} страниц на запрос…`);
-  addLog('Включён показ похожих результатов Google (filter=0); параметр сохраняется при переходе между страницами.');
-  let tabId = null;
+  setStatus($('run-status'), `Подготавливаю профиль «${profile.name}» для отчёта…`);
+  addLog(`Профиль для этого запуска зафиксирован: «${profile.name}» (${selectedKey}).`);
+  addLog(`Выбрано запросов: ${queryList.length}.`);
+  addLog('Сначала применяю настройки Google Preferences. Поиск начнётся только после подтверждения настроек.');
+
   const report = {
     profile: { ...profile },
     periodLabel,
     createdAt: new Date().toLocaleString('ru-RU'),
     queries: [],
     selectedQueryCount: queryList.length,
+    preferencesApplied: false,
     stoppedByUser: false
   };
+
   try {
+    // Apply the Monitoring profile (not the profile selected on the other tab)
+    // before opening the first Google Search page.
+    const { result: preferencesResult } = await applySettingsInFocusedPreferencesTab({
+      interfaceLang: profile.interfaceLang,
+      resultLangs: profile.resultLangs,
+      region: profile.region
+    });
+    const expectedSettings = ['языки результатов']; // Empty resultLangs means clear the language filter.
+    if (profile.interfaceLang) expectedSettings.push('язык интерфейса');
+    if (profile.region) expectedSettings.push('регион поиска');
+    const missingSettings = [
+      ...(preferencesResult.notFound || []),
+      ...expectedSettings.filter((label) => !(preferencesResult.changed || []).includes(label))
+    ];
+    if (missingSettings.length) {
+      const uniqueMissing = [...new Set(missingSettings)];
+      throw new Error(`Мониторинг не запущен: Google не подтвердил настройки профиля «${profile.name}»: ${uniqueMissing.join(', ')}. Проверьте активную вкладку Preferences и повторите запуск.`);
+    }
+    report.preferencesApplied = true;
+    addLog(`Настройки профиля «${profile.name}» подтверждены в Google Preferences: hl=${profile.interfaceLang || 'без изменения'}, lr=${profile.resultLangs || 'без языкового фильтра'}, gl=${profile.region || 'без изменения'}.`);
+    setStatus($('run-status'), `Настройки профиля «${profile.name}» применены. Перехожу к поиску…`, 'success');
+
     const firstUrl = createSearchUrl(queryList[0], profile, period, 0);
-    const tab = await chrome.tabs.create({ url: firstUrl, active: false });
+    const tab = await chrome.tabs.create({ url: firstUrl, active: true });
     tabId = tab.id;
+    await activateAndFocusTab(tabId);
+    monitoringStarted = true;
+    $('stop-monitor').disabled = false;
+    setStatus($('run-status'), `Запуск: ${queryList.length} запрос(ов), до ${maxPages} страниц на запрос…`);
+    addLog('Включён показ похожих результатов Google (filter=0); параметр сохраняется при переходе между страницами.');
+
     for (let queryIndex = 0; queryIndex < queryList.length; queryIndex++) {
       if (stopRequested) { stoppedByUser = true; break; }
       const query = queryList[queryIndex];
@@ -925,11 +1007,11 @@ $('run-report').addEventListener('click', async () => {
           if (pageIndex + 1 >= maxPages) break;
           if (data.nextUrl) nextUrl = includeSimilarResults(data.nextUrl);
           else if (data.results.length >= 10) {
-            // Запасной путь, если Google изменил разметку ссылки пагинации.
+            // Fallback if Google changes pagination markup.
             const parsed = new URL(nextUrl);
             const currentStart = Number(parsed.searchParams.get('start') || 0);
             parsed.searchParams.set('start', String(currentStart + 10));
-            nextUrl = parsed.toString();
+            nextUrl = includeSimilarResults(parsed.toString());
           } else {
             break;
           }
@@ -962,18 +1044,19 @@ $('run-report').addEventListener('click', async () => {
     setStatus($('run-status'), reportMessage, 'success');
   } catch (error) {
     setStatus($('run-status'), error.message || String(error), 'error');
+    addLog(error.message || String(error));
   } finally {
     if (tabId !== null) {
       try { await chrome.tabs.remove(tabId); } catch (_) {}
     }
-    if ($('restore-russian-after-monitor')?.checked) {
+    if (monitoringStarted && $('restore-russian-after-monitor')?.checked) {
       addLog('Мониторинг завершён: возвращаю русский профиль Google…');
       try {
         const { result } = await applySettingsInFocusedPreferencesTab(RUSSIAN_PROFILE_SETTINGS);
         if (result.changed?.length && !result.notFound?.length) {
           const currentStatus = $('run-status').textContent;
           setStatus($('run-status'), `${currentStatus} Русский профиль Google восстановлен; Preferences открыта на переднем плане.`, 'success');
-          addLog('Русский профиль восстановлен: hl=ru, lr=lang_ru, gl=RU.');
+          addLog('Русский профиль восстановлен: hl=ru, lr=ru, gl=RU.');
         } else {
           addLog(`Не удалось полностью восстановить русский профиль${result.notFound?.length ? `: ${result.notFound.join(', ')}` : ''}. Проверьте вкладку Preferences.`);
         }
@@ -987,6 +1070,10 @@ $('run-report').addEventListener('click', async () => {
     stopSignalPromise = null;
     $('run-report').disabled = false;
     $('stop-monitor').disabled = true;
+    $('monitor-profile').disabled = false;
+    $('select-all-queries').disabled = false;
+    $('clear-queries').disabled = false;
+    queryContainer.querySelectorAll('input[type="checkbox"]').forEach((box) => { box.disabled = false; });
   }
 });
 
