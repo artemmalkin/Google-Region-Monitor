@@ -1,54 +1,90 @@
-// Взаимодействие с веб-версией ChatGPT для проверки региональной принадлежности СМИ.
-// Каждый запрос отправляется только после открытия нового пустого чата.
-let regionChatGPTProcessing = false;
+// chatgpt_content.js – с блокировкой параллельной обработки
+// ОБНОВЛЕНО: новые селекторы под актуальную разметку ChatGPT (2025+).
+// Раньше использовался [data-message-author-role="assistant"] — его больше нет.
+// Теперь ответы ищутся по data-markdown-text-style="assistant-message"
+// с несколькими фолбэками.
+
+let isProcessing = false;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request?.type === 'REGION_MONITOR_CHATGPT_PING') {
-    sendResponse({ ok: true });
-    return false;
+  if (request.type === "ping") {
+    sendResponse({ status: "ok" });
+    return true;
   }
 
-  if (request?.type !== 'REGION_MONITOR_CHATGPT_PROMPT') return false;
-  if (regionChatGPTProcessing) {
-    sendResponse({ accepted: false, error: 'ChatGPT content script уже обрабатывает другой запрос.' });
-    return false;
+  if (request.type === "chatgpt_request") {
+    if (isProcessing) {
+      console.warn('⚠️ ChatGPT content script уже обрабатывает запрос, отклоняем новый');
+      sendResponse({ error: "Already processing another request" });
+      return true;
+    }
+
+    isProcessing = true;
+
+    handlePrompt(request.prompt, request.expectedId)
+      .then(answer => {
+        const id = request.expectedId || 'default';
+        const key = `chatgpt_response_${id}`;
+        console.log("✅ Получен ответ от ChatGPT, сохраняем в storage, длина:", answer.length);
+        chrome.runtime.sendMessage({ type: 'chatgpt_response_ready', id, value: answer }, () => {
+          if (chrome.runtime.lastError) {
+            console.warn('⚠️ Не удалось доставить ответ ChatGPT напрямую в background:', chrome.runtime.lastError.message);
+          }
+        });
+        chrome.storage.local.set({ [key]: answer }, () => {
+          if (chrome.runtime.lastError) {
+            console.warn("⚠️ Ошибка сохранения ответа ChatGPT в storage:", chrome.runtime.lastError.message);
+          } else {
+            console.log(`✅ Ответ ChatGPT сохранён в storage с ключом ${key}`);
+          }
+        });
+      })
+      .catch(err => {
+        const id = request.expectedId || 'default';
+        const key = `chatgpt_error_${id}`;
+        console.error("❌ Ошибка ChatGPT:", err.message);
+        chrome.runtime.sendMessage({ type: 'chatgpt_error_ready', id, value: err.message }, () => {
+          if (chrome.runtime.lastError) {
+            console.warn('⚠️ Не удалось доставить ошибку ChatGPT напрямую в background:', chrome.runtime.lastError.message);
+          }
+        });
+        chrome.storage.local.set({ [key]: err.message }, () => {
+          if (chrome.runtime.lastError) {
+            console.warn("⚠️ Ошибка сохранения ошибки ChatGPT в storage:", chrome.runtime.lastError.message);
+          }
+        });
+      })
+      .finally(() => {
+        isProcessing = false;
+      });
+
+    sendResponse({ received: true });
+    return true;
   }
-
-  regionChatGPTProcessing = true;
-  const requestId = String(request.requestId || '');
-  handleRegionPrompt(String(request.prompt || ''))
-    .then(({ answer, thinkingMode }) => {
-      chrome.runtime.sendMessage({
-        type: 'REGION_MONITOR_CHATGPT_RESPONSE',
-        requestId,
-        answer,
-        thinkingMode
-      });
-    })
-    .catch((error) => {
-      chrome.runtime.sendMessage({
-        type: 'REGION_MONITOR_CHATGPT_RESPONSE',
-        requestId,
-        error: error?.message || String(error)
-      });
-    })
-    .finally(() => { regionChatGPTProcessing = false; });
-
-  sendResponse({ accepted: true });
-  return false;
 });
 
-async function handleRegionPrompt(prompt) {
-  if (!prompt.trim()) throw new Error('Пустой запрос ChatGPT.');
+async function handlePrompt(prompt, expectedId) {
   const input = await waitForElement(
-    'textarea#prompt-textarea, textarea[placeholder*="Message"], textarea[placeholder*="Сообщение"], ' +
-    'div[contenteditable="true"][role="textbox"], div.ProseMirror, div[contenteditable="true"]',
-    25000
+    'textarea#prompt-textarea, ' +
+    'textarea[placeholder*="Message"], ' +
+    'div[contenteditable="true"][role="textbox"], ' +
+    'div.ProseMirror, ' +
+    'div[contenteditable="true"]'
   );
-  if (!input) throw new Error('Поле ввода ChatGPT не найдено.');
+  if (!input) throw new Error("Поле ввода ChatGPT не найдено");
 
-  const thinkingMode = await enableThinkingMode();
-  setComposerValue(input, prompt);
+  input.focus();
+  if (input.tagName === 'TEXTAREA') {
+    input.value = prompt;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  } else {
+    input.innerText = '';
+    input.innerText = prompt;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('compositionstart', { bubbles: true }));
+    input.dispatchEvent(new Event('compositionend', { bubbles: true }));
+  }
 
   const sendButton = await waitForEnabledButton(
     'button[data-testid="send-button"]',
@@ -57,248 +93,169 @@ async function handleRegionPrompt(prompt) {
     'button[aria-label*="Отправить сообщение"]',
     '#composer-submit-button'
   );
-  if (!sendButton) throw new Error('Кнопка отправки ChatGPT не найдена или не активна.');
+  if (!sendButton) throw new Error("Кнопка отправки ChatGPT не найдена или не активна");
 
-  await sleep(250);
+  await sleep(200);
   sendButton.click();
-  const answer = await waitForAnswer(300000);
-  return { answer, thinkingMode };
+
+  const answer = await waitForAnswer(expectedId);
+  return answer;
 }
 
-function setComposerValue(input, value) {
-  input.focus();
-  if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
-    const prototype = input.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-    const setter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
-    if (setter) setter.call(input, value);
-    else input.value = value;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  } else {
-    input.focus();
-    input.replaceChildren();
-    input.textContent = value;
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
-    input.dispatchEvent(new Event('compositionstart', { bubbles: true }));
-    input.dispatchEvent(new Event('compositionend', { bubbles: true }));
-  }
-}
-
-// В новых версиях веб-интерфейса Thinking Standard/Extended отображается как
-// Medium/High. Выбираем High, затем Medium; для доступных бесплатных планов
-// используем Think из меню композера. Если режим нельзя включить, запрос не идёт.
-async function enableThinkingMode() {
-  const visible = (element) => {
-    if (!element || element.offsetParent === null) return false;
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== 'hidden';
-  };
-  const textOf = (element) => `${element.innerText || element.textContent || ''} ${element.getAttribute?.('aria-label') || ''}`
-    .replace(/\s+/g, ' ').trim();
-  const controls = () => [...document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"]')].filter(visible);
-  const exactMode = (text, mode) => {
-    const firstLine = String(text || '').split('\n')[0].trim().toLowerCase();
-    const compact = String(text || '').trim().toLowerCase();
-    return firstLine === mode || compact === mode || compact.startsWith(`${mode} `) || compact.startsWith(`${mode} ·`);
-  };
-
-  await sleep(350);
-  let list = controls();
-  const pickerSelectors = [
-    'button[data-testid*="model" i]',
-    '[data-testid*="model-switcher" i]',
-    'button[aria-label*="model" i]',
-    'button[aria-label*="модел" i]'
-  ];
-  let picker = null;
-  for (const selector of pickerSelectors) {
-    picker = [...document.querySelectorAll(selector)].find(visible);
-    if (picker) break;
-  }
-  if (!picker) {
-    const composer = document.querySelector('[data-testid*="composer"], form, [class*="composer"]');
-    const scope = composer || document;
-    const candidates = [...scope.querySelectorAll('button, [role="button"]')].filter(visible);
-    picker = candidates.find((element) => /\b(?:GPT[- ]?\d|Instant|Medium|High|Мгновенно|Средний|Высокий)\b/i.test(textOf(element)));
-  }
-
-  // Если выбранный режим уже является режимом размышления — оставляем его.
-  if (picker) {
-    const currentText = textOf(picker);
-    if (/\bHigh\b|\bMedium\b|\bThink(?:ing)?\b|Высокий|Средний|Размышлен/i.test(currentText)) {
-      if (exactMode(currentText, 'high') || /\bHigh\b|Высокий/i.test(currentText)) return 'High (уже выбран)';
-      if (exactMode(currentText, 'medium') || /\bMedium\b|Средний/i.test(currentText)) return 'Medium (уже выбран)';
-      if (/\bThink(?:ing)?\b|Размышлен/i.test(currentText)) return 'Think (уже выбран)';
-    }
-    picker.click();
-    await sleep(300);
-  }
-
-  const chooseOption = (modes) => {
-    const candidates = controls();
-    for (const mode of modes) {
-      const found = candidates.find((element) => {
-        const text = textOf(element);
-        if (mode === 'high') return exactMode(text, 'high') || exactMode(text, 'высокий');
-        if (mode === 'medium') return exactMode(text, 'medium') || exactMode(text, 'средний');
-        return /^(think|thinking|думать|размышлять)(?:\s|$)/i.test(text.trim());
-      });
-      if (found) {
-        found.click();
-        return mode === 'high' ? 'High' : mode === 'medium' ? 'Medium' : 'Think';
-      }
-    }
-    return '';
-  };
-
-  // Предпочитаем высокий уровень размышления; Medium — доступный запасной вариант.
-  let selected = chooseOption(['high', 'medium', 'think']);
-  if (selected) {
-    await sleep(250);
-    return selected;
-  }
-
-  // Для тарифов, где Thinking вызывается через кнопку Think в меню «+».
-  list = controls();
-  const thinkDirect = list.find((element) => /^(think|thinking|думать|размышлять)$/i.test(textOf(element).trim()));
-  if (thinkDirect) {
-    thinkDirect.click();
-    await sleep(250);
-    return 'Think';
-  }
-
-  const addButton = list.find((element) => {
-    const label = textOf(element);
-    const aria = element.getAttribute('aria-label') || '';
-    return /^(add|more|добавить|больше)$/i.test(label) || /add|more|добавить/i.test(aria);
-  });
-  if (addButton) {
-    addButton.click();
-    await sleep(250);
-    selected = chooseOption(['think']);
-    if (selected) {
-      await sleep(250);
-      return selected;
-    }
-  }
-
-  throw new Error('Не удалось включить режим размышления ChatGPT (High, Medium или Think). Проверьте, доступен ли этот режим в вашем аккаунте и виден ли переключатель модели.');
-}
-
+// ==================================================================
+//  УСТОЙЧИВЫЙ ПОИСК СООБЩЕНИЙ АССИСТЕНТА
+// ==================================================================
+// ChatGPT периодически меняет разметку. Ниже — набор селекторов
+// от самой актуальной версии к устаревшей. Возвращается первый
+// непустой результат.
+// ==================================================================
 function getAssistantMessageNodes() {
+  // 1. Актуальная разметка (2025+): контейнер содержимого ответа.
+  //    Именно этот селектор виден в присланном HTML:
+  //    <div data-markdown-text-style="assistant-message" class="MarkdownRoot-...">
   let nodes = document.querySelectorAll('[data-markdown-text-style="assistant-message"]');
-  if (nodes.length) return Array.from(nodes);
+  if (nodes.length > 0) return Array.from(nodes);
+
+  // 2. Блок-обёртка turn-а: data-content-search-unit-key оканчивается на ":assistant"
   nodes = document.querySelectorAll('[data-content-search-unit-key$=":assistant"]');
-  if (nodes.length) return Array.from(nodes);
+  if (nodes.length > 0) return Array.from(nodes);
+
+  // 3. По скрытому заголовку роли — поднимаемся к контейнеру turn-а
   const headers = document.querySelectorAll('[data-conversation-role="assistant"]');
-  if (headers.length) return Array.from(headers)
-    .map((header) => header.closest('[data-chatgpt-search-message-ids]') || header.parentElement)
-    .filter(Boolean);
+  if (headers.length > 0) {
+    return headers
+      .map(h => h.closest('[data-chatgpt-search-message-ids]') || h.parentElement)
+      .filter(Boolean);
+  }
+
+  // 4. Устаревшая разметка (на случай откатов ChatGPT)
   return Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
 }
 
-function cleanAssistantText(value) {
-  return String(value || '').replace(/^\s*(ChatGPT сказал:|ChatGPT said:)\s*/i, '').trim();
+// Убираем возможный служебный префикс, если сработал фолбэк на обёртку turn-а
+function cleanAssistantText(text) {
+  if (!text) return '';
+  return text
+    .replace(/^\s*(ChatGPT сказал:|ChatGPT said:)\s*/i, '')
+    .trim();
 }
 
-function waitForAnswer(timeoutMs = 300000) {
+// ===== ОЖИДАНИЕ ОТВЕТА =====
+function waitForAnswer(expectedId) {
   return new Promise((resolve, reject) => {
     let lastText = '';
     let stableCount = 0;
-    const started = Date.now();
+    const checkInterval = 500;
+    const stableThreshold = 3;
+
     const intervalId = setInterval(() => {
       const messages = getAssistantMessageNodes();
-      if (!messages.length) return;
-      const currentText = cleanAssistantText(messages[messages.length - 1].innerText || messages[messages.length - 1].textContent || '');
-      if (!currentText) return;
-      const stopButton = document.querySelector(
-        'button[aria-label*="Stop"], button[aria-label*="Остановить"], button[data-testid="stop-button"], button[data-testid*="stop" i]'
-      );
+      if (messages.length === 0) return;
+
+      const lastMessage = messages[messages.length - 1];
+      const rawText = lastMessage.innerText || lastMessage.textContent || '';
+      const currentText = cleanAssistantText(rawText);
+
+      if (currentText === '') return;
+
+      // Кнопка "Стоп" — генерация ещё идёт (несколько вариантов aria-label/testid)
+      const stopButton =
+           document.querySelector('button[aria-label*="Stop"]')
+        || document.querySelector('button[aria-label*="Остановить"]')
+        || document.querySelector('button[data-testid="stop-button"]')
+        || document.querySelector('button[data-testid*="stop"]');
       if (stopButton && stopButton.offsetParent !== null) {
         stableCount = 0;
         lastText = currentText;
         return;
       }
+
+      const hasExpectedId = expectedId
+        ? new RegExp(`"id"\\s*:\\s*"${expectedId}"`).test(currentText)
+        : false;
+      const isLongEnough = currentText.length > 40;
+      const isLikelyComplete =
+           currentText.trim().endsWith('}')
+        || currentText.trim().endsWith('"}')
+        || currentText.trim().endsWith(']')
+        || currentText.trim().endsWith('```');
+
+      if (hasExpectedId && isLikelyComplete && isLongEnough) {
+        clearInterval(intervalId);
+        resolve(currentText);
+        return;
+      }
+
       if (currentText === lastText) {
         stableCount++;
-        if (stableCount >= 4 && currentText.length > 15) {
+        if (stableCount >= stableThreshold && isLongEnough) {
           clearInterval(intervalId);
-          clearTimeout(timeoutId);
           resolve(currentText);
         }
       } else {
-        lastText = currentText;
         stableCount = 0;
+        lastText = currentText;
       }
-      if (Date.now() - started >= timeoutMs) {
-        clearInterval(intervalId);
-        clearTimeout(timeoutId);
-        reject(new Error('Таймаут ожидания ответа от ChatGPT (5 минут).'));
-      }
-    }, 500);
-    const timeoutId = setTimeout(() => {
+    }, checkInterval);
+
+    setTimeout(() => {
       clearInterval(intervalId);
-      reject(new Error('Таймаут ожидания ответа от ChatGPT (5 минут).'));
-    }, timeoutMs);
+      reject(new Error("Таймаут ожидания ответа от ChatGPT (300 с)"));
+    }, 300000);
   });
 }
 
-function waitForElement(selector, timeoutMs = 15000) {
-  return new Promise((resolve, reject) => {
-    const isVisible = (element) => {
-      if (!element || element.offsetParent === null) return false;
-      const rect = element.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== 'hidden';
-    };
-    const find = () => [...document.querySelectorAll(selector)].find(isVisible) || null;
-    const initial = find();
-    if (initial) return resolve(initial);
-    const observer = new MutationObserver(() => {
-      const element = find();
-      if (element) {
-        observer.disconnect();
-        clearTimeout(timeout);
-        resolve(element);
-      }
-    });
-    observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
-    const timeout = setTimeout(() => {
-      observer.disconnect();
-      reject(new Error('Поле ввода ChatGPT не появилось за отведённое время.'));
-    }, timeoutMs);
-  });
-}
-
+// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 function waitForEnabledButton(...selectors) {
   return new Promise((resolve, reject) => {
-    const find = () => {
+    const check = () => {
       for (const selector of selectors) {
-        const buttons = [...document.querySelectorAll(selector)];
-        const button = buttons.find((element) => {
-          if (element.disabled || element.offsetParent === null) return false;
-          const rect = element.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== 'hidden';
-        });
-        if (button) return button;
+        const btn = document.querySelector(selector);
+        if (btn && !btn.disabled && btn.offsetParent !== null) {
+          return resolve(btn);
+        }
       }
-      return null;
     };
-    const immediate = find();
-    if (immediate) return resolve(immediate);
-    const observer = new MutationObserver(() => {
-      const button = find();
-      if (button) {
-        observer.disconnect();
-        clearTimeout(timeout);
-        resolve(button);
-      }
+    check();
+    const observer = new MutationObserver(() => check());
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['disabled', 'class', 'style']
     });
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'class', 'style'] });
     const timeout = setTimeout(() => {
       observer.disconnect();
-      reject(new Error('Кнопка отправки ChatGPT не появилась или осталась неактивной.'));
-    }, 15000);
+      reject(new Error("Кнопка отправки не появилась за 10 секунд"));
+    }, 10000);
+    const originalResolve = resolve;
+    resolve = (value) => {
+      clearTimeout(timeout);
+      observer.disconnect();
+      originalResolve(value);
+    };
   });
 }
 
-function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+function waitForElement(selector, timeout = 10000) {
+  return new Promise((resolve, reject) => {
+    const el = document.querySelector(selector);
+    if (el) return resolve(el);
+    const observer = new MutationObserver(() => {
+      const found = document.querySelector(selector);
+      if (found) {
+        observer.disconnect();
+        resolve(found);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => {
+      observer.disconnect();
+      reject(new Error(`Элемент ${selector} не найден`));
+    }, timeout);
+  });
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

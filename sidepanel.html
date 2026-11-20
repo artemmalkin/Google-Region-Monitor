@@ -165,7 +165,11 @@
           <option value="10">10 страниц</option>
         </select>
         <p class="field-help">Сбор идёт последовательно с паузой между страницами. CAPTCHA и страницы согласия не обходятся.</p>
-        <p class="field-help">Перед экспортом ChatGPT в отдельном новом чате проверяет региональность всех уникальных ссылок (режим размышления High/Medium/Think). Нерегиональные ссылки исключаются. Для работы нужен вход в chatgpt.com; при ошибке фильтрации ссылки сохраняются и ошибка указывается в отчёте.</p>
+        <label class="restore-after-monitor">
+          <input id="chatgpt-region-filter-enabled" type="checkbox" checked>
+          <span>Проверять региональную принадлежность СМИ через ChatGPT перед созданием отчёта</span>
+        </label>
+        <p class="field-help">Опцию можно отключить. Если она включена, для каждого пакета ссылок расширение открывает отдельный новый чат ChatGPT. Модель и режим размышления остаются выбранными в самом ChatGPT: расширение не нажимает на переключатель модели. Для работы требуется вход в chatgpt.com. При ошибке проверки все ссылки сохраняются в отчёте.</p>
         <label class="restore-after-monitor">
           <input id="restore-russian-after-monitor" type="checkbox" checked>
           <span>После завершения мониторинга автоматически вернуть русский профиль Google и открыть Preferences на переднем плане</span>
@@ -187,7 +191,7 @@
 
   <footer>
     <span>Данные профилей хранятся локально в Chrome.</span>
-    <span id="app-version">v1.4.6</span>
+    <span id="app-version">v1.4.7</span>
   </footer>
 
   <script src="github-config.js"></script>

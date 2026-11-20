@@ -105,13 +105,15 @@ async function syncStandardProfiles(force = false) {
   return { ok: true, skipped: false, count: normalized.length, syncedAt };
 }
 // ===== Проверка региональной принадлежности ссылок через веб-версию ChatGPT =====
-// Один запрос — один новый чат. Ответ доставляется отдельным runtime-сообщением,
-// чтобы не держать tabs.sendMessage открытым на протяжении всей генерации.
+// Механизм DOM-взаимодействия и протокол сообщений перенесены из рабочего
+// расширения-примера без изменения chatgpt_content.js и startNewChatGPTChat().
+// Для каждого пакета всегда создаётся отдельный новый чат.
 const CHATGPT_URL_PATTERNS = [
-  'https://chatgpt.com/*',
-  'https://*.chatgpt.com/*',
-  'https://chat.openai.com/*'
+  "https://chat.openai.com/*",
+  "https://chatgpt.com/*",
+  "https://*.chatgpt.com/*"
 ];
+let chatGPTTabId = null;
 const pendingRegionChatGPTRequests = new Map();
 let regionChatGPTBusy = false;
 
@@ -128,141 +130,323 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === 'REGION_MONITOR_CHATGPT_RESPONSE') {
-    const pending = pendingRegionChatGPTRequests.get(message.requestId);
+  // Те же типы сообщений, которыми пользуется chatgpt_content.js из примера.
+  if (message?.type === 'chatgpt_response_ready' || message?.type === 'chatgpt_error_ready') {
+    const requestId = String(message.id || message.expectedId || '');
+    const pending = pendingRegionChatGPTRequests.get(requestId);
     if (pending) {
-      pendingRegionChatGPTRequests.delete(message.requestId);
+      pendingRegionChatGPTRequests.delete(requestId);
       clearTimeout(pending.timer);
-      if (message.error) pending.reject(new Error(String(message.error)));
-      else pending.resolve({ answer: String(message.answer || ''), thinkingMode: String(message.thinkingMode || '') });
+      if (message.type === 'chatgpt_error_ready') pending.reject(new Error(String(message.value || 'Ошибка ChatGPT.')));
+      else pending.resolve(String(message.value || ''));
     }
-    return false;
+    sendResponse({ ok: true });
+    return true;
   }
 
   return false;
 });
 
-function regionMonitorSleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function waitForChatGPTTabComplete(tabId, timeoutMs = 30000) {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    let tab;
-    try { tab = await chrome.tabs.get(tabId); } catch (_) { return false; }
-    if (!tab) return false;
-    if (tab.status === 'complete') return true;
-    await regionMonitorSleep(350);
+// chatgpt_content.js из примера также пишет готовый ответ в storage.local.
+// Удаляем временные ключи после записи, чтобы накопившиеся ответы не занимали хранилище.
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  for (const key of Object.keys(changes)) {
+    if (key.startsWith('chatgpt_response_') || key.startsWith('chatgpt_error_')) {
+      chrome.storage.local.remove(key).catch(() => {});
+    }
   }
-  return false;
+});
+
+function pingSW() {
+  try {
+    chrome.runtime.getPlatformInfo(() => {});
+  } catch (e) {}
 }
 
-async function waitForChatGPTComposer(tabId, timeoutMs = 30000) {
-  const started = Date.now();
-  const selector = 'textarea#prompt-textarea, textarea[placeholder*="Message"], textarea[placeholder*="Сообщение"], div[contenteditable="true"][role="textbox"], div.ProseMirror, div[contenteditable="true"]';
-  while (Date.now() - started < timeoutMs) {
+async function getOrCreateChatGPTTab() {
+  if (chatGPTTabId) {
     try {
-      const result = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: (css) => {
-          return [...document.querySelectorAll(css)].some((el) => {
-            const rect = el.getBoundingClientRect();
-            return rect.width > 0 && rect.height > 0 && getComputedStyle(el).visibility !== 'hidden';
-          });
-        },
-        args: [selector]
-      });
-      if (result?.[0]?.result) return true;
-    } catch (_) {}
-    await regionMonitorSleep(400);
+      const tab = await chrome.tabs.get(chatGPTTabId);
+      if (tab) return tab;
+    } catch { chatGPTTabId = null; }
   }
-  return false;
-}
-
-async function getOrCreateRegionChatGPTTab() {
-  const tabs = await chrome.tabs.query({ url: CHATGPT_URL_PATTERNS });
-  let tab = tabs.find((item) => item.id != null) || null;
-  if (!tab) tab = await chrome.tabs.create({ url: 'https://chatgpt.com/', active: true });
+  const tabs = await chrome.tabs.query({
+    url: ["https://chat.openai.com/*", "https://chatgpt.com/*", "https://*.chatgpt.com/*"]
+  });
+  let tab = tabs[0];
+  if (!tab) {
+    tab = await chrome.tabs.create({ url: "https://chat.openai.com", active: true });
+  }
+  chatGPTTabId = tab.id;
   return tab;
 }
 
-async function startNewRegionChatGPTChat(tabId) {
-  await waitForChatGPTTabComplete(tabId, 30000).catch(() => false);
-  await regionMonitorSleep(700);
-
-  let clicked = false;
+async function startNewChatGPTChat() {
+  let tab = null;
   try {
-    const result = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        const isVisible = (el) => {
-          if (!el || el.offsetParent === null) return false;
-          const rect = el.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0;
-        };
-        const labels = ['New chat', 'New Chat', 'Новый чат', 'Начать новый чат'];
-        for (const node of document.querySelectorAll('span, div, button')) {
-          if (!labels.includes((node.textContent || '').trim())) continue;
-          const control = node.closest('button, [role="button"], a');
-          if (control && isVisible(control)) {
-            control.click();
-            return { ok: true, method: 'visible-label' };
+    tab = await getOrCreateChatGPTTab();
+    await waitForTabComplete(tab.id, 20000).catch(() => {});
+    await sleep(800);
+
+    let clicked = false;
+    try {
+      const res = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          const isVisible = (el) => {
+            if (!el) return false;
+            if (el.offsetParent === null) return false;
+            const r = el.getBoundingClientRect();
+            return r.width > 0 && r.height > 0;
+          };
+
+          const texts = ['Новый чат', 'New chat', 'New Chat'];
+
+          const spans = document.querySelectorAll('span');
+          for (const sp of spans) {
+            const t = (sp.textContent || '').trim();
+            if (texts.includes(t)) {
+              const btn = sp.closest('button') || sp.closest('[role="button"]') || sp.closest('a');
+              if (btn && isVisible(btn)) {
+                btn.click();
+                return { ok: true, method: 'text-span' };
+              }
+            }
           }
-        }
-        const selectors = [
-          'button[aria-label*="new chat" i]',
-          'button[aria-label*="новый чат" i]',
-          '[data-testid*="new-chat" i]',
-          '[data-sidebar-destination="new-chat"]',
-          '[data-sidebar-destination="builtin:new-chat"]',
-          'a[href="/"]'
-        ];
-        for (const selector of selectors) {
-          for (const element of document.querySelectorAll(selector)) {
-            if (!isVisible(element)) continue;
-            element.click();
-            return { ok: true, method: selector };
+
+          const selectors = [
+            'a[href="/"]',
+            'button[aria-label*="new chat" i]',
+            'button[aria-label*="новый чат" i]',
+            '[data-testid*="new-chat" i]',
+            '[data-sidebar-destination="new-chat"]',
+            '[data-sidebar-destination="builtin:new-chat"]'
+          ];
+          for (const sel of selectors) {
+            const els = document.querySelectorAll(sel);
+            for (const el of els) {
+              if (!isVisible(el)) continue;
+              el.click();
+              return { ok: true, method: sel };
+            }
           }
+          return { ok: false };
         }
-        return { ok: false };
+      });
+      if (res && res[0] && res[0].result && res[0].result.ok) {
+        clicked = true;
+        console.log(`🆕 ChatGPT: клик по «New chat» (${res[0].result.method})`);
       }
-    });
-    clicked = !!result?.[0]?.result?.ok;
-  } catch (_) {}
+    } catch (e) {
+      console.warn('⚠️ ChatGPT new chat: не удалось кликнуть:', e.message);
+    }
 
-  if (clicked) {
-    await regionMonitorSleep(900);
-    // Если SPA не покинула старый адрес диалога, сбрасываем её на новый пустой чат.
-    const currentTab = await chrome.tabs.get(tabId);
-    const pathname = (() => { try { return new URL(currentTab.url).pathname; } catch (_) { return ''; } })();
-    if (/\/(?:c|share)\//i.test(pathname)) clicked = false;
-  }
-  if (!clicked) {
-    // Переход на корневой адрес — надёжный fallback, а не продолжение старого диалога.
-    await chrome.tabs.update(tabId, { url: 'https://chatgpt.com/' });
-    await waitForChatGPTTabComplete(tabId, 30000).catch(() => false);
-    await regionMonitorSleep(1000);
-  }
+    if (!clicked) {
+      console.log('🆕 ChatGPT: кнопка не найдена, перехожу на главную страницу');
+      try {
+        await chrome.tabs.update(tab.id, { url: 'https://chatgpt.com/' });
+      } catch (e) {
+        console.warn('⚠️ ChatGPT: не удалось обновить URL:', e.message);
+      }
+    } else {
+      await sleep(800);
+    }
 
-  const ready = await waitForChatGPTComposer(tabId, 25000);
-  if (!ready) throw new Error('Не удалось открыть новый чат ChatGPT: поле ввода не появилось. Проверьте вход в chatgpt.com.');
-  return true;
+    console.log('🆕 ChatGPT: перезагружаю страницу после создания нового чата');
+    try {
+      await chrome.tabs.reload(tab.id, { bypassCache: true });
+    } catch (e) {
+      console.warn('⚠️ ChatGPT: не удалось перезагрузить вкладку:', e.message);
+    }
+
+    await waitForTabComplete(tab.id, 30000).catch(() => {});
+    await sleep(1500);
+
+    const hasInput = await waitForSelectorInTab(
+      tab.id,
+      'textarea#prompt-textarea, textarea[placeholder*="Message"], ' +
+      'div[contenteditable="true"][role="textbox"], div.ProseMirror, div[contenteditable="true"]',
+      15000,
+      500
+    );
+    if (!hasInput) {
+      console.warn('⚠️ ChatGPT: поле ввода не появилось после нового чата');
+      return false;
+    }
+
+    await sleep(500);
+    return true;
+  } catch (e) {
+    console.warn('⚠️ startNewChatGPTChat error:', e.message);
+    return false;
+  }
 }
 
-async function ensureRegionChatGPTContentScript(tabId) {
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function waitForTabLoad(tabId, timeout = 30000) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+      if (tab.status === 'complete') return resolve();
+      const listener = (updatedTabId, changeInfo) => {
+        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      };
+      chrome.tabs.onUpdated.addListener(listener);
+      setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(listener);
+        reject(new Error('Таймаут загрузки страницы'));
+      }, timeout);
+    });
+  });
+}
+
+async function waitForTabComplete(tabId, timeoutMs = 30000) {
+  const start = Date.now();
+  let iteration = 0;
+  while (Date.now() - start < timeoutMs) {
+    iteration++;
+    if (iteration % 6 === 0) pingSW();
+    try {
+      const tab = await new Promise((resolve) => {
+        chrome.tabs.get(tabId, (t) => {
+          if (chrome.runtime.lastError || !t) resolve(null);
+          else resolve(t);
+        });
+      });
+      if (!tab) return false;
+      if (tab.status === 'complete') return true;
+    } catch (e) {
+      return false;
+    }
+    await sleep(500);
+  }
+  return false;
+}
+
+async function waitForSelectorInTab(tabId, selector, timeoutMs = 30000, pollMs = 500) {
+  const start = Date.now();
+  let iteration = 0;
+  while (Date.now() - start < timeoutMs) {
+    iteration++;
+    if (iteration % 6 === 0) pingSW();
+    try {
+      const res = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: (sel) => !!document.querySelector(sel),
+        args: [selector]
+      });
+      if (res && res[0] && res[0].result) return true;
+    } catch (e) {}
+    await sleep(pollMs);
+  }
+  return false;
+}
+
+async function injectContentScriptIfNeeded(tabId, scriptFile) {
   try {
-    await new Promise((resolve, reject) => {
-      chrome.tabs.sendMessage(tabId, { type: 'REGION_MONITOR_CHATGPT_PING' }, (response) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-        else resolve(response);
+    await chrome.tabs.sendMessage(tabId, { type: "ping" });
+    return true;
+  } catch (err) {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: [scriptFile]
+      });
+      await sleep(500);
+      await chrome.tabs.sendMessage(tabId, { type: "ping" });
+      return true;
+    } catch (e) {
+      console.error('Не удалось внедрить контент-скрипт:', e);
+      return false;
+    }
+  }
+}
+
+function restorePreviousTab(tabId, windowId) {
+  if (tabId) {
+    try {
+      chrome.tabs.update(tabId, { active: true });
+      if (windowId) {
+        chrome.windows.update(windowId, { focused: true });
+      }
+    } catch (e) {}
+  }
+}
+
+async function sendPromptToChatGPT(prompt, expectedId) {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const previousTabId = activeTab ? activeTab.id : null;
+  const previousWindowId = activeTab ? activeTab.windowId : null;
+
+  const id = expectedId || Date.now().toString();
+  const responseKey = `chatgpt_response_${id}`;
+  const errorKey = `chatgpt_error_${id}`;
+  try { await chrome.storage.local.remove([responseKey, errorKey]); } catch (_) {}
+
+  try {
+    const tab = await getOrCreateChatGPTTab();
+    await waitForTabLoad(tab.id);
+
+    await chrome.tabs.update(tab.id, { active: true });
+    await chrome.windows.update(tab.windowId, { focused: true });
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Всегда новый чат — точная функция из расширения-примера.
+    const newChatReady = await startNewChatGPTChat();
+    if (!newChatReady) {
+      throw new Error('Не удалось открыть новый чат ChatGPT. Проверьте вход в chatgpt.com.');
+    }
+
+    await waitForTabLoad(tab.id);
+    await chrome.tabs.update(tab.id, { active: true });
+    await chrome.windows.update(tab.windowId, { focused: true });
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const ready = await injectContentScriptIfNeeded(tab.id, "chatgpt_content.js");
+    if (!ready) {
+      throw new Error('Не удалось активировать контент-скрипт на странице ChatGPT');
+    }
+
+    return await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pendingRegionChatGPTRequests.delete(id);
+        reject(new Error('Таймаут ожидания ответа от ChatGPT (300 с)'));
+      }, 305000);
+      pendingRegionChatGPTRequests.set(id, { resolve, reject, timer });
+
+      // Протокол отправки один-в-один как в примере: chatgpt_request.
+      chrome.tabs.sendMessage(tab.id, {
+        type: "chatgpt_request",
+        prompt,
+        expectedId: id
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          const msg = chrome.runtime.lastError.message;
+          const pending = pendingRegionChatGPTRequests.get(id);
+          if (pending) {
+            clearTimeout(pending.timer);
+            pendingRegionChatGPTRequests.delete(id);
+            reject(new Error(msg));
+          }
+        } else if (response && response.error) {
+          const pending = pendingRegionChatGPTRequests.get(id);
+          if (pending) {
+            clearTimeout(pending.timer);
+            pendingRegionChatGPTRequests.delete(id);
+            reject(new Error(response.error));
+          }
+        }
       });
     });
-    return true;
-  } catch (_) {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ['chatgpt_content.js'] });
-    await regionMonitorSleep(150);
-    return true;
+  } finally {
+    restorePreviousTab(previousTabId, previousWindowId);
   }
 }
 
@@ -273,53 +457,10 @@ async function classifyLinksWithWebChatGPT(prompt, suppliedRequestId) {
 
   regionChatGPTBusy = true;
   const requestId = String(suppliedRequestId || `region_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-  let previousTabId = null;
-  let previousWindowId = null;
-  let chatTab = null;
-
   try {
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    previousTabId = activeTab?.id ?? null;
-    previousWindowId = activeTab?.windowId ?? null;
-    chatTab = await getOrCreateRegionChatGPTTab();
-    await chrome.tabs.update(chatTab.id, { active: true });
-    if (chatTab.windowId != null) await chrome.windows.update(chatTab.windowId, { focused: true });
-    await startNewRegionChatGPTChat(chatTab.id);
-    await ensureRegionChatGPTContentScript(chatTab.id);
-
-    const responsePromise = new Promise((resolve, reject) => {
-      const pending = { resolve, reject, timer: null };
-      pending.timer = setTimeout(() => {
-        pendingRegionChatGPTRequests.delete(requestId);
-        reject(new Error('Таймаут ожидания ответа ChatGPT (5 минут).'));
-      }, 330000);
-      pendingRegionChatGPTRequests.set(requestId, pending);
-    });
-
-    const acknowledgement = await new Promise((resolve, reject) => {
-      chrome.tabs.sendMessage(chatTab.id, {
-        type: 'REGION_MONITOR_CHATGPT_PROMPT',
-        prompt,
-        requestId
-      }, (response) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-        else if (!response?.accepted) reject(new Error(response?.error || 'Контент-скрипт ChatGPT не принял запрос.'));
-        else resolve(response);
-      });
-    });
-    if (!acknowledgement?.accepted) throw new Error('ChatGPT не принял запрос.');
-
-    return await responsePromise;
+    const answer = await sendPromptToChatGPT(prompt, requestId);
+    return { answer };
   } finally {
-    const pending = pendingRegionChatGPTRequests.get(requestId);
-    if (pending?.timer) clearTimeout(pending.timer);
-    pendingRegionChatGPTRequests.delete(requestId);
-    if (previousTabId != null) {
-      try { await chrome.tabs.update(previousTabId, { active: true }); } catch (_) {}
-      if (previousWindowId != null) {
-        try { await chrome.windows.update(previousWindowId, { focused: true }); } catch (_) {}
-      }
-    }
     regionChatGPTBusy = false;
   }
 }

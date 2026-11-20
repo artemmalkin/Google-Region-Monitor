@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Google Region Monitor",
-  "version": "1.4.6",
-  "description": "Региональный мониторинг Google с проверкой ссылок через ChatGPT, профилями поиска и GitHub-синхронизацией.",
+  "version": "1.4.7",
+  "description": "Региональный мониторинг Google с опциональной проверкой ссылок через веб-ChatGPT, профилями поиска и GitHub-синхронизацией.",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",

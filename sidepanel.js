@@ -17,6 +17,7 @@ let isRunning = false;
 let stopRequested = false;
 let stopSignalResolver = null;
 let stopSignalPromise = null;
+const REGION_CHATGPT_FILTER_SETTING = 'regionMediaChatGPTFilterEnabled';
 
 const $ = (id) => document.getElementById(id);
 function makeId() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
@@ -824,10 +825,12 @@ function escapeHtml(value) {
 function createReportHtml(report) {
   const filter = report.mediaFilter || { status: 'skipped' };
   const filterSummary = filter.status === 'completed'
-    ? `<p class="filter-summary"><b>Проверка региональности СМИ:</b> ChatGPT (${escapeHtml(filter.thinkingMode || 'режим размышления')}); проверено уникальных ссылок: ${Number(filter.checkedLinks || 0)}; исключено уникальных ссылок: ${Number(filter.excludedUniqueLinks || 0)} (удалено вхождений: ${Number(filter.excludedResultEntries || 0)}).</p>`
+    ? `<p class="filter-summary"><b>Проверка региональности СМИ:</b> ChatGPT; проверено уникальных ссылок: ${Number(filter.checkedLinks || 0)}; исключено уникальных ссылок: ${Number(filter.excludedUniqueLinks || 0)} (удалено вхождений: ${Number(filter.excludedResultEntries || 0)}).</p>`
     : filter.status === 'failed'
       ? `<p class="filter-summary warning"><b>Проверка региональности СМИ не завершена:</b> ${escapeHtml(filter.error || 'неизвестная ошибка')}. Все результаты сохранены без фильтрации ChatGPT.</p>`
-      : `<p class="filter-summary"><b>Проверка региональности СМИ:</b> пропущена — ссылок для проверки нет.</p>`;
+      : filter.status === 'disabled'
+        ? `<p class="filter-summary"><b>Проверка региональности СМИ:</b> отключена пользователем; результаты включены без фильтрации ChatGPT.</p>`
+        : `<p class="filter-summary"><b>Проверка региональности СМИ:</b> пропущена — ссылок для проверки нет.</p>`;
   const rows = report.queries.map((queryReport) => {
     const pages = queryReport.pages.map((page, pageIndex) => {
       const resultCards = page.results.map((result, index) => `
@@ -988,19 +991,18 @@ function parseRegionMediaChatGPTAnswer(answer) {
 async function filterReportLinksByRegionWithChatGPT(report, profile) {
   const uniqueItems = collectUniqueReportLinks(report);
   if (!uniqueItems.length) {
-    return { status: 'skipped', checkedLinks: 0, excludedUniqueLinks: 0, excludedResultEntries: 0, thinkingMode: '', error: '' };
+    return { status: 'skipped', checkedLinks: 0, excludedUniqueLinks: 0, excludedResultEntries: 0, error: '' };
   }
 
   const batchSize = 70;
   const batches = [];
   for (let i = 0; i < uniqueItems.length; i += batchSize) batches.push(uniqueItems.slice(i, i + batchSize));
   const excludedIds = new Set();
-  let thinkingMode = '';
 
   try {
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
-      addLog(`ChatGPT: проверка региональности ссылок, пакет ${batchIndex + 1}/${batches.length} (${batch.length} ссылок). Открываю новый чат с режимом размышления…`);
+      addLog(`ChatGPT: проверка региональности ссылок, пакет ${batchIndex + 1}/${batches.length} (${batch.length} ссылок). Открываю новый чат…`);
       setStatus($('run-status'), `Проверяю ссылки через ChatGPT: пакет ${batchIndex + 1}/${batches.length}…`);
       const requestId = `region_${Date.now()}_${batchIndex + 1}_${makeId()}`;
       const prompt = buildRegionMediaPrompt(profile, batch, batchIndex + 1, batches.length);
@@ -1019,7 +1021,6 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
         clearInterval(keepAlive);
       }
       if (!response?.ok) throw new Error(response?.error || 'Не удалось получить ответ ChatGPT.');
-      if (!thinkingMode) thinkingMode = response.thinkingMode || '';
       const ids = parseRegionMediaChatGPTAnswer(response.answer);
       const allowedIds = new Set(batch.map((item) => item.id));
       ids.forEach((id) => { if (allowedIds.has(id)) excludedIds.add(id); });
@@ -1041,7 +1042,6 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
       checkedLinks: uniqueItems.length,
       excludedUniqueLinks: excludedKeys.size,
       excludedResultEntries,
-      thinkingMode,
       error: ''
     };
     addLog(`Региональный фильтр завершён: проверено ${result.checkedLinks} уникальных ссылок, удалено из отчёта ${result.excludedUniqueLinks} (${result.excludedResultEntries} вхождений).`);
@@ -1054,11 +1054,28 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
       checkedLinks: 0,
       excludedUniqueLinks: 0,
       excludedResultEntries: 0,
-      thinkingMode,
       error: message.slice(0, 700)
     };
   }
 }
+
+async function loadRegionChatGPTFilterSetting() {
+  const stored = await chrome.storage.local.get({ [REGION_CHATGPT_FILTER_SETTING]: true });
+  $('chatgpt-region-filter-enabled').checked = stored[REGION_CHATGPT_FILTER_SETTING] !== false;
+}
+
+$('chatgpt-region-filter-enabled').addEventListener('change', async (event) => {
+  const enabled = !!event.target.checked;
+  try {
+    await chrome.storage.local.set({ [REGION_CHATGPT_FILTER_SETTING]: enabled });
+    addLog(enabled
+      ? 'Проверка региональности ссылок через ChatGPT включена.'
+      : 'Проверка региональности ссылок через ChatGPT отключена.');
+  } catch (error) {
+    event.target.checked = !enabled;
+    setStatus($('run-status'), `Не удалось сохранить настройку ChatGPT: ${error.message || String(error)}`, 'error');
+  }
+});
 
 $('stop-monitor').addEventListener('click', () => {
   if (!isRunning || stopRequested) return;
@@ -1107,6 +1124,7 @@ $('run-report').addEventListener('click', async () => {
   const maxPages = Math.max(1, Math.min(10, Number($('max-pages').value) || 3));
   const period = $('period').value;
   const periodLabel = $('period').selectedOptions[0].textContent;
+  const chatGPTFilterEnabled = $('chatgpt-region-filter-enabled').checked;
   const totalSteps = queryList.length * maxPages;
   let completedSteps = 0;
   let stoppedByUser = false;
@@ -1116,6 +1134,7 @@ $('run-report').addEventListener('click', async () => {
   stopSignalPromise = new Promise((resolve) => { stopSignalResolver = resolve; });
   isRunning = true;
   $('run-report').disabled = true;
+  $('chatgpt-region-filter-enabled').disabled = true;
   $('stop-monitor').disabled = true; // Enabled only after Preferences are applied.
   $('monitor-profile').disabled = true;
   $('select-all-queries').disabled = true;
@@ -1222,8 +1241,13 @@ $('run-report').addEventListener('click', async () => {
     stoppedByUser = stoppedByUser || stopRequested;
     report.stoppedByUser = stoppedByUser;
     $('stop-monitor').disabled = true;
-    addLog('Сбор Google завершён. Перед созданием HTML-отчёта проверяю, какие ссылки не относятся к выбранному региону СМИ.');
-    report.mediaFilter = await filterReportLinksByRegionWithChatGPT(report, profile);
+    if (chatGPTFilterEnabled) {
+      addLog('Сбор Google завершён. Перед созданием HTML-отчёта проверяю региональную принадлежность СМИ через ChatGPT.');
+      report.mediaFilter = await filterReportLinksByRegionWithChatGPT(report, profile);
+    } else {
+      addLog('Сбор Google завершён. Проверка региональности через ChatGPT отключена пользователем; все результаты включаются в отчёт.');
+      report.mediaFilter = { status: 'disabled', checkedLinks: 0, excludedUniqueLinks: 0, excludedResultEntries: 0, error: '' };
+    }
     const html = createReportHtml(report);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const objectUrl = URL.createObjectURL(blob);
@@ -1241,7 +1265,9 @@ $('run-report').addEventListener('click', async () => {
       ? ` ChatGPT проверил ${report.mediaFilter.checkedLinks} ссылок и исключил ${report.mediaFilter.excludedUniqueLinks}.`
       : report.mediaFilter?.status === 'failed'
         ? ' ChatGPT-фильтр не сработал; все ссылки оставлены в отчёте.'
-        : '';
+        : report.mediaFilter?.status === 'disabled'
+          ? ' Проверка через ChatGPT отключена; все ссылки оставлены в отчёте.'
+          : '';
     const reportMessage = (stoppedByUser
       ? `Остановлено. Отчёт сформирован по уже собранным результатам: ${totalResults}.`
       : `Готово. HTML-отчёт сформирован: ${totalResults} результатов.`) + filterMessage;
@@ -1273,6 +1299,7 @@ $('run-report').addEventListener('click', async () => {
     stopSignalResolver = null;
     stopSignalPromise = null;
     $('run-report').disabled = false;
+    $('chatgpt-region-filter-enabled').disabled = false;
     $('stop-monitor').disabled = true;
     $('monitor-profile').disabled = false;
     $('select-all-queries').disabled = false;
@@ -1635,6 +1662,7 @@ async function initializeGitHubFeatures() {
 }
 
 $('app-version').textContent = `v${EXTENSION_VERSION}`;
+loadRegionChatGPTFilterSetting().catch((error) => setStatus($('run-status'), `Не удалось загрузить настройку ChatGPT: ${error.message || String(error)}`, 'error'));
 loadProfiles().then(initializeGitHubFeatures).catch((error) => setStatus($('save-status'), error.message || String(error), 'error'));
 
 // Reflect a daily background sync in an already-open side panel without touching local profiles.
