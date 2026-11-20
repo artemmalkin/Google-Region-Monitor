@@ -18,6 +18,7 @@ let stopRequested = false;
 let stopSignalResolver = null;
 let stopSignalPromise = null;
 const REGION_CHATGPT_FILTER_SETTING = 'regionMediaChatGPTFilterEnabled';
+const REGION_CHATGPT_REASONING_SETTING = 'regionMediaChatGPTReasoningEnabled';
 
 const $ = (id) => document.getElementById(id);
 function makeId() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
@@ -844,13 +845,17 @@ function createReportHtml(report) {
     }).join('');
     return `<section class="query"><h2>Запрос: ${escapeHtml(queryReport.query)}</h2>${queryReport.error ? `<p class="warning">${escapeHtml(queryReport.error)}</p>` : ''}${pages}</section>`;
   }).join('');
+  const hiddenItems = report.mediaFilterHiddenResults || report.mediaFilter?.hiddenResults || [];
+  const hiddenRows = hiddenItems.map((item, index) => `<article class="result hidden-result"><div class="result-number">${index + 1}. Скрытый результат · запрос: ${escapeHtml(item.query || '—')} · страница ${Number(item.pageIndex || 1)}</div><h3><a href="${escapeHtml(item.result?.url || '')}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.result?.title || item.result?.url || 'Без названия')}</a></h3><div class="url"><a href="${escapeHtml(item.result?.url || '')}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.result?.url || '')}</a></div><p>${escapeHtml(item.result?.snippet || '')}</p><p class="exclusion-reason"><b>Объяснение ChatGPT:</b> ${escapeHtml(item.reason || 'Причина не указана.')}</p></article>`).join('');
+  const hiddenSection = hiddenItems.length ? `<details class="hidden-results"><summary>Показать скрытые результаты ChatGPT (${hiddenItems.length})</summary><p class="hidden-intro">Эти ссылки исключены из основного списка. Здесь сохранены исходные результаты и объяснения ChatGPT.</p>${hiddenRows}</details>` : '';
   return `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Google Search Report — ${escapeHtml(report.profile.name)}</title>
 <style>
-:root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}.filter-summary{padding:10px 12px;background:#f1f5fb;border-radius:8px;font-size:12px}.filter-summary.warning{color:#8b1e1e;background:#fce8e6}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
+:root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}.filter-summary{padding:10px 12px;background:#f1f5fb;border-radius:8px;font-size:12px}.filter-summary.warning{color:#8b1e1e;background:#fce8e6}.hidden-results{margin:18px 0;padding:14px 16px;background:#fff;border:1px solid #e3e6eb;border-radius:12px}.hidden-results summary{cursor:pointer;font-weight:700;color:#3c4043}.hidden-intro{font-size:12px;color:#687078}.hidden-result{padding:12px 0;border-top:1px dashed #e5e8ec}.exclusion-reason{padding:9px 11px;background:#fff7e6;border-radius:7px;font-size:12px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
 <header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Настройки Google Preferences:</b> ${report.preferencesApplied ? 'подтверждены перед началом мониторинга' : 'не подтверждены'}<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : 'Завершён'}</p>${filterSummary}</header>
 ${rows}
+${hiddenSection}
 <footer>Отчёт создан расширением Google Region Monitor. Ссылки на результаты открываются в новых вкладках.</footer></body></html>`;
 }
 
@@ -983,10 +988,16 @@ function parseRegionMediaChatGPTAnswer(answer) {
   catch (error) { throw new Error(`Не удалось разобрать JSON ChatGPT: ${error.message}`); }
   const values = parsed.exclude_ids ?? parsed.excluded_ids ?? parsed.exclude_links;
   if (!Array.isArray(values)) throw new Error('В JSON ChatGPT отсутствует массив exclude_ids.');
-  return values.map((value) => {
-    if (value && typeof value === 'object') return Number(value.id);
-    return Number(value);
-  }).filter((value) => Number.isInteger(value) && value > 0);
+  const ids = values.map((value) => value && typeof value === 'object' ? Number(value.id) : Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0);
+  const reasons = {};
+  if (parsed.reasons && typeof parsed.reasons === 'object') {
+    for (const [id, reason] of Object.entries(parsed.reasons)) reasons[Number(id)] = String(reason || '').trim();
+  }
+  if (Array.isArray(parsed.exclude_links)) {
+    for (const item of parsed.exclude_links) if (item && Number.isInteger(Number(item.id)) && item.reason) reasons[Number(item.id)] = String(item.reason).trim();
+  }
+  return { ids, reasons };
 }
 
 async function filterReportLinksByRegionWithChatGPT(report, profile) {
@@ -999,6 +1010,8 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
   const batches = [];
   for (let i = 0; i < uniqueItems.length; i += batchSize) batches.push(uniqueItems.slice(i, i + batchSize));
   const excludedIds = new Set();
+  const exclusionReasons = {};
+  const reasoningEnabled = $('chatgpt-region-reasoning-enabled')?.checked === true;
 
   try {
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
@@ -1016,33 +1029,46 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
         response = await chrome.runtime.sendMessage({
           type: 'REGION_MONITOR_CHATGPT_CLASSIFY',
           requestId,
-          prompt
+          prompt,
+          enableReasoning: reasoningEnabled
         });
       } finally {
         clearInterval(keepAlive);
       }
       if (!response?.ok) throw new Error(response?.error || 'Не удалось получить ответ ChatGPT.');
-      const ids = parseRegionMediaChatGPTAnswer(response.answer);
+      const parsed = parseRegionMediaChatGPTAnswer(response.answer);
       const allowedIds = new Set(batch.map((item) => item.id));
-      ids.forEach((id) => { if (allowedIds.has(id)) excludedIds.add(id); });
-      addLog(`ChatGPT: пакет ${batchIndex + 1}/${batches.length} обработан; исключено ${ids.filter((id) => allowedIds.has(id)).length} ссылок.`);
+      parsed.ids.forEach((id) => { if (allowedIds.has(id)) { excludedIds.add(id); exclusionReasons[id] = parsed.reasons[id] || 'ChatGPT отметил СМИ как не относящееся к целевому региону; подробное объяснение не предоставлено.'; } });
+      addLog(`ChatGPT: пакет ${batchIndex + 1}/${batches.length} обработан; исключено ${parsed.ids.filter((id) => allowedIds.has(id)).length} ссылок.`);
     }
 
     const excludedKeys = new Set(uniqueItems.filter((item) => excludedIds.has(item.id)).map((item) => item.key));
+    const itemByKey = new Map(uniqueItems.map((item) => [item.key, item]));
+    const hiddenResults = [];
     let excludedResultEntries = 0;
     for (const queryReport of report.queries || []) {
-      for (const page of queryReport.pages || []) {
-        const before = (page.results || []).length;
-        page.results = (page.results || []).filter((result) => !excludedKeys.has(normalizeRegionFilterUrl(result.url)));
-        excludedResultEntries += before - page.results.length;
+      for (let pageIndex = 0; pageIndex < (queryReport.pages || []).length; pageIndex++) {
+        const page = queryReport.pages[pageIndex];
+        const kept = [];
+        for (const result of page.results || []) {
+          const key = normalizeRegionFilterUrl(result.url);
+          if (excludedKeys.has(key)) {
+            const item = itemByKey.get(key);
+            hiddenResults.push({ query: queryReport.query, pageIndex: pageIndex + 1, result: { ...result }, reason: exclusionReasons[item?.id] || 'ChatGPT исключил эту ссылку.' });
+            excludedResultEntries++;
+          } else kept.push(result);
+        }
+        page.results = kept;
       }
     }
+    report.mediaFilterHiddenResults = hiddenResults;
 
     const result = {
       status: 'completed',
       checkedLinks: uniqueItems.length,
       excludedUniqueLinks: excludedKeys.size,
       excludedResultEntries,
+      hiddenResults,
       error: ''
     };
     addLog(`Региональный фильтр завершён: проверено ${result.checkedLinks} уникальных ссылок, удалено из отчёта ${result.excludedUniqueLinks} (${result.excludedResultEntries} вхождений).`);
@@ -1063,6 +1089,8 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
 async function loadRegionChatGPTFilterSetting() {
   const stored = await chrome.storage.local.get({ [REGION_CHATGPT_FILTER_SETTING]: true });
   $('chatgpt-region-filter-enabled').checked = stored[REGION_CHATGPT_FILTER_SETTING] !== false;
+  const reasoning = await chrome.storage.local.get({ [REGION_CHATGPT_REASONING_SETTING]: false });
+  $('chatgpt-region-reasoning-enabled').checked = reasoning[REGION_CHATGPT_REASONING_SETTING] === true;
 }
 
 $('chatgpt-region-filter-enabled').addEventListener('change', async (event) => {
@@ -1075,6 +1103,18 @@ $('chatgpt-region-filter-enabled').addEventListener('change', async (event) => {
   } catch (error) {
     event.target.checked = !enabled;
     setStatus($('run-status'), `Не удалось сохранить настройку ChatGPT: ${error.message || String(error)}`, 'error');
+  }
+});
+
+
+$('chatgpt-region-reasoning-enabled').addEventListener('change', async (event) => {
+  const enabled = !!event.target.checked;
+  try {
+    await chrome.storage.local.set({ [REGION_CHATGPT_REASONING_SETTING]: enabled });
+    addLog(enabled ? 'Режим «Размышление» ChatGPT будет включаться перед проверкой.' : 'Автоматическое включение режима «Размышление» отключено.');
+  } catch (error) {
+    event.target.checked = !enabled;
+    setStatus($('run-status'), `Не удалось сохранить настройку режима размышления: ${error.message || String(error)}`, 'error');
   }
 });
 
@@ -1136,6 +1176,7 @@ $('run-report').addEventListener('click', async () => {
   isRunning = true;
   $('run-report').disabled = true;
   $('chatgpt-region-filter-enabled').disabled = true;
+  $('chatgpt-region-reasoning-enabled').disabled = true;
   $('stop-monitor').disabled = true; // Enabled only after Preferences are applied.
   $('monitor-profile').disabled = true;
   $('select-all-queries').disabled = true;
@@ -1301,6 +1342,7 @@ $('run-report').addEventListener('click', async () => {
     stopSignalPromise = null;
     $('run-report').disabled = false;
     $('chatgpt-region-filter-enabled').disabled = false;
+    $('chatgpt-region-reasoning-enabled').disabled = false;
     $('stop-monitor').disabled = true;
     $('monitor-profile').disabled = false;
     $('select-all-queries').disabled = false;

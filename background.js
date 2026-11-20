@@ -124,7 +124,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === 'REGION_MONITOR_CHATGPT_CLASSIFY') {
-    classifyLinksWithWebChatGPT(message.prompt, message.requestId)
+    classifyLinksWithWebChatGPT(message.prompt, message.requestId, message.enableReasoning === true)
       .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: error?.message || String(error) }));
     return true;
@@ -186,8 +186,9 @@ async function startNewChatGPTChat() {
   let tab = null;
   try {
     tab = await getOrCreateChatGPTTab();
-    await waitForTabComplete(tab.id, 20000).catch(() => {});
-    await sleep(800);
+    await waitForTabComplete(tab.id, 120000).catch(() => {});
+    // ChatGPT may finish document loading before its React controls are hydrated.
+    await sleep(1800);
 
     let clicked = false;
     try {
@@ -250,7 +251,7 @@ async function startNewChatGPTChat() {
         console.warn('⚠️ ChatGPT: не удалось обновить URL:', e.message);
       }
     } else {
-      await sleep(800);
+      await sleep(1500);
     }
 
     console.log('🆕 ChatGPT: перезагружаю страницу после создания нового чата');
@@ -260,15 +261,15 @@ async function startNewChatGPTChat() {
       console.warn('⚠️ ChatGPT: не удалось перезагрузить вкладку:', e.message);
     }
 
-    await waitForTabComplete(tab.id, 30000).catch(() => {});
+    await waitForTabComplete(tab.id, 120000).catch(() => {});
     await sleep(1500);
 
     const hasInput = await waitForSelectorInTab(
       tab.id,
       'textarea#prompt-textarea, textarea[placeholder*="Message"], ' +
       'div[contenteditable="true"][role="textbox"], div.ProseMirror, div[contenteditable="true"]',
-      15000,
-      500
+      120000,
+      750
     );
     if (!hasInput) {
       console.warn('⚠️ ChatGPT: поле ввода не появилось после нового чата');
@@ -287,7 +288,7 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function waitForTabLoad(tabId, timeout = 30000) {
+function waitForTabLoad(tabId, timeout = 120000) {
   return new Promise((resolve, reject) => {
     chrome.tabs.get(tabId, (tab) => {
       if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
@@ -359,7 +360,7 @@ async function injectContentScriptIfNeeded(tabId, scriptFile) {
         target: { tabId },
         files: [scriptFile]
       });
-      await sleep(500);
+      await sleep(1500);
       await chrome.tabs.sendMessage(tabId, { type: "ping" });
       return true;
     } catch (e) {
@@ -380,7 +381,7 @@ function restorePreviousTab(tabId, windowId) {
   }
 }
 
-async function sendPromptToChatGPT(prompt, expectedId) {
+async function sendPromptToChatGPT(prompt, expectedId, enableReasoning = false) {
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const previousTabId = activeTab ? activeTab.id : null;
   const previousWindowId = activeTab ? activeTab.windowId : null;
@@ -409,6 +410,11 @@ async function sendPromptToChatGPT(prompt, expectedId) {
     await chrome.windows.update(tab.windowId, { focused: true });
     await new Promise(resolve => setTimeout(resolve, 300));
 
+    if (enableReasoning) {
+      const reasoning = await ensureChatGPTReasoningEnabled(tab.id);
+      if (!reasoning.ok) throw new Error(`Не удалось включить режим «Размышление»: ${reasoning.reason || 'переключатель не найден'}`);
+    }
+
     const ready = await injectContentScriptIfNeeded(tab.id, "chatgpt_content.js");
     if (!ready) {
       throw new Error('Не удалось активировать контент-скрипт на странице ChatGPT');
@@ -417,8 +423,8 @@ async function sendPromptToChatGPT(prompt, expectedId) {
     return await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         pendingRegionChatGPTRequests.delete(id);
-        reject(new Error('Таймаут ожидания ответа от ChatGPT (300 с)'));
-      }, 305000);
+        reject(new Error('Таймаут ожидания ответа от ChatGPT (15 минут)'));
+      }, 910000);
       pendingRegionChatGPTRequests.set(id, { resolve, reject, timer });
 
       // Протокол отправки один-в-один как в примере: chatgpt_request.
@@ -450,7 +456,69 @@ async function sendPromptToChatGPT(prompt, expectedId) {
   }
 }
 
-async function classifyLinksWithWebChatGPT(prompt, suppliedRequestId) {
+async function ensureChatGPTReasoningEnabled(tabId, timeoutMs = 120000) {
+  const started = Date.now();
+  let clickAttempted = false;
+
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const injected = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: (alreadyClicked) => {
+          const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+          const isVisible = (el) => {
+            if (!el || !el.getClientRects().length) return false;
+            const style = getComputedStyle(el);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          };
+
+          // Основной путь взят из актуальной разметки ChatGPT.html:
+          // form[data-chatgpt-composer] > ... > [data-composer-trailing-controls]
+          // > button[aria-pressed] > span «Размышление».
+          const composerButtons = document.querySelectorAll(
+            'form[data-chatgpt-composer] [data-composer-trailing-controls="true"] button[aria-pressed]'
+          );
+          let button = Array.from(composerButtons).find((candidate) =>
+            normalize(candidate.textContent) === 'Размышление' && isVisible(candidate)
+          );
+
+          // Запасной вариант на случай, если ChatGPT изменит структуру composer.
+          if (!button) {
+            button = Array.from(document.querySelectorAll('button[aria-pressed]')).find((candidate) =>
+              normalize(candidate.textContent) === 'Размышление' && isVisible(candidate)
+            );
+          }
+
+          if (!button) return { ok: false, reason: 'toggle-not-found' };
+          if (button.getAttribute('aria-pressed') === 'true') {
+            return { ok: true, alreadyOn: !alreadyClicked };
+          }
+
+          // Не нажимаем повторно, пока React/страница не обновит aria-pressed:
+          // повторный click на медленной странице мог бы выключить режим обратно.
+          if (!alreadyClicked) {
+            button.click();
+            return { ok: false, clicked: true, reason: 'waiting-for-pressed-state' };
+          }
+          return { ok: false, reason: 'waiting-for-pressed-state' };
+        },
+        args: [clickAttempted]
+      });
+
+      const result = injected?.[0]?.result;
+      if (result?.clicked) clickAttempted = true;
+      if (result?.ok) return result;
+    } catch (_) {}
+
+    await sleep(1000);
+  }
+
+  return {
+    ok: false,
+    reason: clickAttempted ? 'toggle-state-timeout' : 'toggle-not-found-or-timeout'
+  };
+}
+async function classifyLinksWithWebChatGPT(prompt, suppliedRequestId, enableReasoning = false) {
   if (regionChatGPTBusy) throw new Error('Вкладка ChatGPT уже занята другим запросом расширения.');
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Пустой запрос для ChatGPT.');
   if (prompt.length > 450000) throw new Error('Запрос слишком большой для одного сообщения ChatGPT. Разбейте список результатов на меньшие части.');
@@ -458,7 +526,7 @@ async function classifyLinksWithWebChatGPT(prompt, suppliedRequestId) {
   regionChatGPTBusy = true;
   const requestId = String(suppliedRequestId || `region_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   try {
-    const answer = await sendPromptToChatGPT(prompt, requestId);
+    const answer = await sendPromptToChatGPT(prompt, requestId, enableReasoning);
     return { answer };
   } finally {
     regionChatGPTBusy = false;

@@ -145,7 +145,7 @@ function waitForAnswer(expectedId) {
   return new Promise((resolve, reject) => {
     let lastText = '';
     let stableCount = 0;
-    const checkInterval = 500;
+    const checkInterval = 750;
     const stableThreshold = 3;
 
     const intervalId = setInterval(() => {
@@ -200,8 +200,8 @@ function waitForAnswer(expectedId) {
 
     setTimeout(() => {
       clearInterval(intervalId);
-      reject(new Error("Таймаут ожидания ответа от ChatGPT (300 с)"));
-    }, 300000);
+      reject(new Error("Таймаут ожидания ответа от ChatGPT (15 минут)"));
+    }, 900000);
   });
 }
 
@@ -226,8 +226,8 @@ function waitForEnabledButton(...selectors) {
     });
     const timeout = setTimeout(() => {
       observer.disconnect();
-      reject(new Error("Кнопка отправки не появилась за 10 секунд"));
-    }, 10000);
+      reject(new Error("Кнопка отправки не появилась за 120 секунд"));
+    }, 120000);
     const originalResolve = resolve;
     resolve = (value) => {
       clearTimeout(timeout);
@@ -237,7 +237,7 @@ function waitForEnabledButton(...selectors) {
   });
 }
 
-function waitForElement(selector, timeout = 10000) {
+function waitForElement(selector, timeout = 120000) {
   return new Promise((resolve, reject) => {
     const el = document.querySelector(selector);
     if (el) return resolve(el);
