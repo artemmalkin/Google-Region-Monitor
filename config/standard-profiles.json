@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-20T07:10:47.306Z",
+  "updatedAt": "2026-11-20T08:14:58.369Z",
   "profiles": [
     {
       "id": "vietnam",
@@ -20,6 +20,16 @@
       "region": "ID",
       "queries": [
         "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+      ]
+    },
+    {
+      "id": "kitai",
+      "name": "Китай",
+      "interfaceLang": "zh-CN",
+      "resultLangs": "zh-CN",
+      "region": "HK",
+      "queries": [
+        "rosatom -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com"
       ]
     }
   ]
