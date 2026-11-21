@@ -124,7 +124,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === 'REGION_MONITOR_CHATGPT_CLASSIFY') {
-    classifyLinksWithWebChatGPT(message.prompt, message.requestId, message.enableReasoning === true)
+    classifyLinksWithWebChatGPT(message.prompt, message.requestId, message.enableReasoning === true, message.reasoningEffort || 'medium')
       .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: error?.message || String(error) }));
     return true;
@@ -381,7 +381,7 @@ function restorePreviousTab(tabId, windowId) {
   }
 }
 
-async function sendPromptToChatGPT(prompt, expectedId, enableReasoning = false) {
+async function sendPromptToChatGPT(prompt, expectedId, enableReasoning = false, reasoningEffort = 'medium') {
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const previousTabId = activeTab ? activeTab.id : null;
   const previousWindowId = activeTab ? activeTab.windowId : null;
@@ -411,8 +411,11 @@ async function sendPromptToChatGPT(prompt, expectedId, enableReasoning = false) 
     await new Promise(resolve => setTimeout(resolve, 300));
 
     if (enableReasoning) {
-      const reasoning = await ensureChatGPTReasoningEnabled(tab.id);
-      if (!reasoning.ok) throw new Error(`Не удалось включить режим «Размышление»: ${reasoning.reason || 'переключатель не найден'}`);
+      const reasoning = await ensureChatGPTReasoningMode(tab.id, reasoningEffort);
+      if (!reasoning.ok) throw new Error(`Не удалось установить режим размышления ChatGPT (${reasoningEffort}): ${reasoning.reason || 'режим не найден'}`);
+      if (reasoning.mode === 'legacy-toggle' && reasoningEffort !== 'medium') {
+        console.warn(`ChatGPT: в этом интерфейсе доступен только переключатель «Размышление»; уровень ${reasoningEffort} выбрать нельзя.`);
+      }
     }
 
     const ready = await injectContentScriptIfNeeded(tab.id, "chatgpt_content.js");
@@ -456,69 +459,122 @@ async function sendPromptToChatGPT(prompt, expectedId, enableReasoning = false) 
   }
 }
 
-async function ensureChatGPTReasoningEnabled(tabId, timeoutMs = 120000) {
+async function ensureChatGPTReasoningMode(tabId, effort = 'medium', timeoutMs = 120000) {
+  const allowedEfforts = ['low', 'medium', 'high', 'xhigh'];
+  if (!allowedEfforts.includes(effort)) effort = 'medium';
+
   const started = Date.now();
-  let clickAttempted = false;
+  let pickerOpened = false;
+  let optionClickAttempted = false;
+  let legacyClickAttempted = false;
 
   while (Date.now() - started < timeoutMs) {
     try {
       const injected = await chrome.scripting.executeScript({
         target: { tabId },
-        func: (alreadyClicked) => {
-          const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        func: (requestedEffort, menuWasOpened, optionWasClicked, legacyWasClicked) => {
+          const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('ru');
           const isVisible = (el) => {
             if (!el || !el.getClientRects().length) return false;
             const style = getComputedStyle(el);
-            return style.display !== 'none' && style.visibility !== 'hidden';
+            return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
           };
 
-          // Основной путь взят из актуальной разметки ChatGPT.html:
-          // form[data-chatgpt-composer] > ... > [data-composer-trailing-controls]
-          // > button[aria-pressed] > span «Размышление».
+          const picker = Array.from(document.querySelectorAll(
+            'form[data-chatgpt-composer] button[data-composer-navigation-target="reasoning"][aria-haspopup="menu"], button[data-composer-navigation-target="reasoning"][aria-haspopup="menu"], button[aria-label="Выбрать модель ChatGPT"][aria-haspopup="menu"]'
+          )).find(isVisible);
+
+          // Подписочный интерфейс: выпадающий переключатель уровня reasoning.
+          if (picker) {
+            const selected = normalize(picker.getAttribute('data-selected-reasoning-effort'));
+            if (selected === requestedEffort) return { ok: true, mode: 'effort-picker', selected };
+
+            if (!menuWasOpened) {
+              picker.click();
+              return { menuOpened: true, mode: 'effort-picker' };
+            }
+
+            if (optionWasClicked) {
+              return { waitingForSelection: true, mode: 'effort-picker' };
+            }
+
+            const aliases = {
+              low: ['low', 'низкий', 'низкое', 'минимальный', 'минимальное', 'легкий', 'лёгкий', 'меньше'],
+              medium: ['medium', 'средний', 'среднее', 'обычный', 'стандартный'],
+              high: ['high', 'высокий', 'высокое', 'больше'],
+              xhigh: ['xhigh', 'extra high', 'very high', 'максимальный', 'максимальное', 'максимум', 'очень высокий']
+            };
+            const selectors = [
+              '[role="menuitemradio"]', '[role="menuitemcheckbox"]', '[role="option"]', '[role="menuitem"]', '[role="radio"]',
+              '[data-reasoning-effort]', '[data-effort]', '[data-value]', 'button'
+            ].join(',');
+            const candidates = Array.from(document.querySelectorAll(selectors)).filter((el) => isVisible(el) && el !== picker);
+
+            const identify = (el) => {
+              const attrValues = [
+                el.getAttribute('data-reasoning-effort'), el.getAttribute('data-effort'),
+                el.getAttribute('data-value'), el.getAttribute('value'), el.getAttribute('aria-label')
+              ].map(normalize).filter(Boolean);
+              const text = normalize(el.innerText || el.textContent);
+              for (const [value, names] of Object.entries(aliases)) {
+                if (attrValues.some((candidate) => names.includes(candidate))) return value;
+                if (names.some((name) => text === name || text.startsWith(`${name} `) || text.endsWith(` ${name}`) || text.includes(` ${name} `))) return value;
+              }
+              return '';
+            };
+
+            // Предпочитаем пункты меню с явной ролью/атрибутом, а не внешние контейнеры.
+            const option = candidates.find((el) => identify(el) === requestedEffort);
+            if (option) {
+              option.click();
+              return { optionClicked: true, mode: 'effort-picker', requestedEffort };
+            }
+            return { waitingForOptions: true, mode: 'effort-picker' };
+          }
+
+          // Бесплатный/упрощённый интерфейс: одна кнопка «Размышление».
           const composerButtons = document.querySelectorAll(
             'form[data-chatgpt-composer] [data-composer-trailing-controls="true"] button[aria-pressed]'
           );
-          let button = Array.from(composerButtons).find((candidate) =>
-            normalize(candidate.textContent) === 'Размышление' && isVisible(candidate)
+          let toggle = Array.from(composerButtons).find((candidate) =>
+            normalize(candidate.textContent) === 'размышление' && isVisible(candidate)
           );
-
-          // Запасной вариант на случай, если ChatGPT изменит структуру composer.
-          if (!button) {
-            button = Array.from(document.querySelectorAll('button[aria-pressed]')).find((candidate) =>
-              normalize(candidate.textContent) === 'Размышление' && isVisible(candidate)
+          if (!toggle) {
+            toggle = Array.from(document.querySelectorAll('button[aria-pressed]')).find((candidate) =>
+              normalize(candidate.textContent) === 'размышление' && isVisible(candidate)
             );
           }
-
-          if (!button) return { ok: false, reason: 'toggle-not-found' };
-          if (button.getAttribute('aria-pressed') === 'true') {
-            return { ok: true, alreadyOn: !alreadyClicked };
+          if (!toggle) return { waitingForControl: true, reason: 'reasoning-control-not-found' };
+          if (toggle.getAttribute('aria-pressed') === 'true') {
+            return { ok: true, mode: 'legacy-toggle', selected: 'enabled' };
           }
-
-          // Не нажимаем повторно, пока React/страница не обновит aria-pressed:
-          // повторный click на медленной странице мог бы выключить режим обратно.
-          if (!alreadyClicked) {
-            button.click();
-            return { ok: false, clicked: true, reason: 'waiting-for-pressed-state' };
+          if (!legacyWasClicked) {
+            toggle.click();
+            return { legacyClicked: true, mode: 'legacy-toggle' };
           }
-          return { ok: false, reason: 'waiting-for-pressed-state' };
+          return { waitingForSelection: true, mode: 'legacy-toggle' };
         },
-        args: [clickAttempted]
+        args: [effort, pickerOpened, optionClickAttempted, legacyClickAttempted]
       });
 
       const result = injected?.[0]?.result;
-      if (result?.clicked) clickAttempted = true;
+      if (result?.menuOpened) pickerOpened = true;
+      if (result?.optionClicked) optionClickAttempted = true;
+      if (result?.legacyClicked) legacyClickAttempted = true;
       if (result?.ok) return result;
-    } catch (_) {}
+    } catch (_) {
+      // ChatGPT can temporarily reject script execution while its SPA is loading.
+    }
 
     await sleep(1000);
   }
 
-  return {
-    ok: false,
-    reason: clickAttempted ? 'toggle-state-timeout' : 'toggle-not-found-or-timeout'
-  };
+  if (optionClickAttempted) return { ok: false, reason: 'effort-selection-not-confirmed' };
+  if (pickerOpened) return { ok: false, reason: 'requested-effort-not-available-in-menu' };
+  if (legacyClickAttempted) return { ok: false, reason: 'legacy-toggle-state-timeout' };
+  return { ok: false, reason: 'reasoning-control-not-found-or-timeout' };
 }
-async function classifyLinksWithWebChatGPT(prompt, suppliedRequestId, enableReasoning = false) {
+async function classifyLinksWithWebChatGPT(prompt, suppliedRequestId, enableReasoning = false, reasoningEffort = 'medium') {
   if (regionChatGPTBusy) throw new Error('Вкладка ChatGPT уже занята другим запросом расширения.');
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Пустой запрос для ChatGPT.');
   if (prompt.length > 450000) throw new Error('Запрос слишком большой для одного сообщения ChatGPT. Разбейте список результатов на меньшие части.');
@@ -526,7 +582,7 @@ async function classifyLinksWithWebChatGPT(prompt, suppliedRequestId, enableReas
   regionChatGPTBusy = true;
   const requestId = String(suppliedRequestId || `region_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   try {
-    const answer = await sendPromptToChatGPT(prompt, requestId, enableReasoning);
+    const answer = await sendPromptToChatGPT(prompt, requestId, enableReasoning, reasoningEffort);
     return { answer };
   } finally {
     regionChatGPTBusy = false;

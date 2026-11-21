@@ -172,9 +172,16 @@
         <p class="field-help">Опцию можно отключить. Для каждого пакета ссылок открывается отдельный новый чат ChatGPT. Исключённые ссылки и объяснения сохраняются в раскрываемом разделе отчёта. При ошибке проверки все ссылки остаются в основном отчёте.</p>
         <label class="restore-after-monitor">
           <input id="chatgpt-region-reasoning-enabled" type="checkbox">
-          <span>Автоматически включать режим «Размышление» ChatGPT перед отправкой запроса</span>
+          <span>Автоматически настраивать режим размышления ChatGPT перед отправкой запроса</span>
         </label>
-        <p class="field-help">Опционально. Используется кнопка «Размышление» с атрибутом aria-pressed из интерфейса ChatGPT. Если переключатель не найден, проверка завершится ошибкой, а результаты не будут скрыты.</p>
+        <label class="field-label" for="chatgpt-region-reasoning-effort">Уровень размышления (аккаунт с подпиской)</label>
+        <select id="chatgpt-region-reasoning-effort" disabled>
+          <option value="low">Низкий</option>
+          <option value="medium" selected>Средний</option>
+          <option value="high">Высокий</option>
+          <option value="xhigh">Максимальный</option>
+        </select>
+        <p class="field-help">В интерфейсе с подпиской расширение выбирает этот уровень через меню «Выбрать модель ChatGPT» (значения low, medium, high, xhigh). В интерфейсе с одной кнопкой «Размышление» включает её; выбор уровня там недоступен. Если выбранного уровня нет в текущем меню, проверка не будет отправлена и ссылки останутся в отчёте.</p>
         <label class="restore-after-monitor">
           <input id="restore-russian-after-monitor" type="checkbox" checked>
           <span>После завершения мониторинга автоматически вернуть русский профиль Google и открыть Preferences на переднем плане</span>

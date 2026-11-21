@@ -19,6 +19,7 @@ let stopSignalResolver = null;
 let stopSignalPromise = null;
 const REGION_CHATGPT_FILTER_SETTING = 'regionMediaChatGPTFilterEnabled';
 const REGION_CHATGPT_REASONING_SETTING = 'regionMediaChatGPTReasoningEnabled';
+const REGION_CHATGPT_REASONING_EFFORT_SETTING = 'regionMediaChatGPTReasoningEffort';
 
 const $ = (id) => document.getElementById(id);
 function makeId() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
@@ -1004,6 +1005,7 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
   const excludedIds = new Set();
   const exclusionReasons = {};
   const reasoningEnabled = $('chatgpt-region-reasoning-enabled')?.checked === true;
+  const reasoningEffort = $('chatgpt-region-reasoning-effort')?.value || 'medium';
 
   try {
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
@@ -1022,7 +1024,8 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
           type: 'REGION_MONITOR_CHATGPT_CLASSIFY',
           requestId,
           prompt,
-          enableReasoning: reasoningEnabled
+          enableReasoning: reasoningEnabled,
+          reasoningEffort
         });
       } finally {
         clearInterval(keepAlive);
@@ -1081,8 +1084,15 @@ async function filterReportLinksByRegionWithChatGPT(report, profile) {
 async function loadRegionChatGPTFilterSetting() {
   const stored = await chrome.storage.local.get({ [REGION_CHATGPT_FILTER_SETTING]: true });
   $('chatgpt-region-filter-enabled').checked = stored[REGION_CHATGPT_FILTER_SETTING] !== false;
-  const reasoning = await chrome.storage.local.get({ [REGION_CHATGPT_REASONING_SETTING]: false });
+  const reasoning = await chrome.storage.local.get({
+    [REGION_CHATGPT_REASONING_SETTING]: false,
+    [REGION_CHATGPT_REASONING_EFFORT_SETTING]: 'medium'
+  });
   $('chatgpt-region-reasoning-enabled').checked = reasoning[REGION_CHATGPT_REASONING_SETTING] === true;
+  $('chatgpt-region-reasoning-effort').value = ['low', 'medium', 'high', 'xhigh'].includes(reasoning[REGION_CHATGPT_REASONING_EFFORT_SETTING])
+    ? reasoning[REGION_CHATGPT_REASONING_EFFORT_SETTING]
+    : 'medium';
+  $('chatgpt-region-reasoning-effort').disabled = !$('chatgpt-region-reasoning-enabled').checked;
 }
 
 $('chatgpt-region-filter-enabled').addEventListener('change', async (event) => {
@@ -1101,12 +1111,26 @@ $('chatgpt-region-filter-enabled').addEventListener('change', async (event) => {
 
 $('chatgpt-region-reasoning-enabled').addEventListener('change', async (event) => {
   const enabled = !!event.target.checked;
+  $('chatgpt-region-reasoning-effort').disabled = !enabled;
   try {
     await chrome.storage.local.set({ [REGION_CHATGPT_REASONING_SETTING]: enabled });
-    addLog(enabled ? 'Режим «Размышление» ChatGPT будет включаться перед проверкой.' : 'Автоматическое включение режима «Размышление» отключено.');
+    addLog(enabled
+      ? `Автоматическая настройка режима ChatGPT включена; выбран уровень «${$('chatgpt-region-reasoning-effort').selectedOptions[0].textContent}».`
+      : 'Автоматическая настройка режима размышления ChatGPT отключена.');
   } catch (error) {
     event.target.checked = !enabled;
+    $('chatgpt-region-reasoning-effort').disabled = !event.target.checked;
     setStatus($('run-status'), `Не удалось сохранить настройку режима размышления: ${error.message || String(error)}`, 'error');
+  }
+});
+
+$('chatgpt-region-reasoning-effort').addEventListener('change', async (event) => {
+  const effort = ['low', 'medium', 'high', 'xhigh'].includes(event.target.value) ? event.target.value : 'medium';
+  try {
+    await chrome.storage.local.set({ [REGION_CHATGPT_REASONING_EFFORT_SETTING]: effort });
+    addLog(`Для ChatGPT выбран уровень размышления: «${event.target.selectedOptions[0].textContent}».`);
+  } catch (error) {
+    setStatus($('run-status'), `Не удалось сохранить уровень размышления ChatGPT: ${error.message || String(error)}`, 'error');
   }
 });
 
@@ -1169,6 +1193,7 @@ $('run-report').addEventListener('click', async () => {
   $('run-report').disabled = true;
   $('chatgpt-region-filter-enabled').disabled = true;
   $('chatgpt-region-reasoning-enabled').disabled = true;
+  $('chatgpt-region-reasoning-effort').disabled = true;
   $('stop-monitor').disabled = true; // Enabled only after Preferences are applied.
   $('monitor-profile').disabled = true;
   $('select-all-queries').disabled = true;
@@ -1335,6 +1360,7 @@ $('run-report').addEventListener('click', async () => {
     $('run-report').disabled = false;
     $('chatgpt-region-filter-enabled').disabled = false;
     $('chatgpt-region-reasoning-enabled').disabled = false;
+    $('chatgpt-region-reasoning-effort').disabled = !$('chatgpt-region-reasoning-enabled').checked;
     $('stop-monitor').disabled = true;
     $('monitor-profile').disabled = false;
     $('select-all-queries').disabled = false;
