@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T20:58:51.417Z",
+  "updatedAt": "2026-11-23T21:04:43.134Z",
   "profiles": [
     {
       "id": "argentina",
@@ -353,7 +353,7 @@
       "id": "myanmar",
       "name": "Мьянма",
       "interfaceLang": "my",
-      "resultLangs": "my",
+      "resultLangs": "",
       "region": "MM",
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 2,
@@ -370,14 +370,14 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "rosatom -site:.ru"
+            "rosatom -site:.ru site:.mmm"
           ]
         }
       ],
       "queries": [
         "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
         "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
-        "rosatom -site:.ru"
+        "rosatom -site:.ru site:.mmm"
       ]
     },
     {
