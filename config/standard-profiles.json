@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T11:58:34.827Z",
+  "updatedAt": "2026-11-23T12:04:25.270Z",
   "profiles": [
     {
       "id": "vietnam",
@@ -39,14 +39,7 @@
       "resultLangs": "pt",
       "region": "BR",
       "queries": [
-        "\"energia nuclear\"",
-        "\"energia nucleoelétrica\"",
-        "\"usina nuclear\"",
-        "\"central nuclear\"",
-        "\"Angra 1\" OR \"Angra 2\" OR \"Angra 3\"",
-        "\"Eletronuclear\"",
-        "\"política nuclear brasileira\"",
-        "\"política energética nuclear\""
+        "(\"energia nuclear\" OR \"energia nucleoelétrica\" OR \"usina nuclear\" OR \"central nuclear\" OR \"Angra 1\" OR \"Angra 2\" OR \"Angra 3\" OR \"Eletronuclear\" OR \"política nuclear brasileira\" OR \"política energética nuclear\")"
       ]
     }
   ]
