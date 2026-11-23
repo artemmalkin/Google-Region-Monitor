@@ -138,12 +138,26 @@ function normalizeRemoteProfile(raw, index) {
   const resultLangs = Array.isArray(raw.resultLangs) ? raw.resultLangs.join(', ') : String(raw.resultLangs || '');
   const id = String(raw.id || `profile-${index + 1}`).trim();
   if (!/^[a-z0-9_.-]{1,80}$/i.test(id)) throw new Error(`У профиля «${name}» некорректный id.`);
+
+  // Keep this marker when caching the remote profile. The side panel uses it
+  // to distinguish an authoritative, user-edited GitHub query-group layout
+  // from a legacy profile that still needs migration to bundled defaults.
+  let queryGroupsRevision;
+  if (raw.queryGroupsRevision !== undefined && raw.queryGroupsRevision !== null) {
+    const revision = Number(raw.queryGroupsRevision);
+    if (!Number.isInteger(revision) || revision < 0 || revision > 100) {
+      throw new Error(`У профиля «${name}» некорректный queryGroupsRevision.`);
+    }
+    queryGroupsRevision = revision;
+  }
+
   return {
     id, name,
     interfaceLang: String(raw.interfaceLang || '').trim(),
     resultLangs: resultLangs.trim(),
     region: String(raw.region || '').trim().toUpperCase(),
     ...(Object.prototype.hasOwnProperty.call(raw, 'profileGroup') ? { profileGroup: String(raw.profileGroup || '').trim() } : {}),
+    ...(queryGroupsRevision !== undefined ? { queryGroupsRevision } : {}),
     queryGroups,
     queries: queries.length ? queries : queryGroups.flatMap((group) => group.queries)
   };
@@ -162,16 +176,48 @@ async function syncStandardProfiles(force = false) {
     return { ok: true, skipped: true, count: Array.isArray(stored.standardProfiles) ? stored.standardProfiles.length : 0, syncedAt: lastSync };
   }
 
-  const rawPath = settings.path.split('/').map(encodeURIComponent).join('/');
-  const url = `https://raw.githubusercontent.com/${settings.repo}/${encodeURIComponent(settings.branch)}/${rawPath}?_=${Date.now()}`;
-  const response = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
-  if (!response.ok) {
-    const message = response.status === 404
-      ? `Файл стандартных профилей не найден: ${settings.path} (ветка ${settings.branch}).`
-      : `GitHub вернул HTTP ${response.status} при загрузке стандартных профилей.`;
-    throw new Error(message);
+  // Prefer the authenticated Contents API for every forced/manual sync.
+  // raw.githubusercontent.com is CDN-backed and can briefly return the previous
+  // revision immediately after a successful PUT commit. Reading through the API
+  // avoids that read-after-write race. Keep raw as a fallback for read-only setups.
+  const credentials = await chrome.storage.local.get({ githubToken: '' });
+  const token = String(credentials.githubToken || '').trim();
+  let text = '';
+  if (token) {
+    const apiPath = settings.path.split('/').map(encodeURIComponent).join('/');
+    const apiUrl = `https://api.github.com/repos/${settings.repo}/contents/${apiPath}?ref=${encodeURIComponent(settings.branch)}`;
+    const apiResponse = await fetch(apiUrl, {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    });
+    if (!apiResponse.ok) {
+      const message = apiResponse.status === 404
+        ? `Файл стандартных профилей не найден: ${settings.path} (ветка ${settings.branch}).`
+        : `GitHub API вернул HTTP ${apiResponse.status} при загрузке стандартных профилей.`;
+      throw new Error(message);
+    }
+    const file = await apiResponse.json();
+    if (file.encoding !== 'base64' || !file.content) throw new Error('GitHub API не вернул содержимое JSON-файла в Base64.');
+    const binary = atob(String(file.content).replace(/\s/g, ''));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    text = new TextDecoder('utf-8').decode(bytes);
+  } else {
+    const rawPath = settings.path.split('/').map(encodeURIComponent).join('/');
+    const url = `https://raw.githubusercontent.com/${settings.repo}/${encodeURIComponent(settings.branch)}/${rawPath}?_=${Date.now()}`;
+    const response = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
+    if (!response.ok) {
+      const message = response.status === 404
+        ? `Файл стандартных профилей не найден: ${settings.path} (ветка ${settings.branch}).`
+        : `GitHub вернул HTTP ${response.status} при загрузке стандартных профилей.`;
+      throw new Error(message);
+    }
+    text = await response.text();
   }
-  const text = (await response.text()).replace(/^\uFEFF/, '');
+  text = text.replace(/^\uFEFF/, '');
   let config;
   try { config = JSON.parse(text); } catch (_) { throw new Error('Файл стандартных профилей в GitHub не является корректным JSON.'); }
   const source = Array.isArray(config) ? config : config?.profiles;
