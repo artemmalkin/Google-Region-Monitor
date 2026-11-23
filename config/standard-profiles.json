@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T21:05:50.079Z",
+  "updatedAt": "2026-11-23T21:07:43.182Z",
   "profiles": [
     {
       "id": "argentina",
@@ -370,14 +370,14 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "rosatom -site:.ru site:.mmm"
+            "rosatom -site:.ru site:.mm"
           ]
         }
       ],
       "queries": [
         "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
         "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
-        "rosatom -site:.ru site:.mmm"
+        "rosatom -site:.ru site:.mm"
       ]
     },
     {
