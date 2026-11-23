@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T20:35:19.565Z",
+  "updatedAt": "2026-11-23T20:36:25.137Z",
   "profiles": [
     {
       "id": "argentina",
@@ -37,14 +37,10 @@
       "id": "bangladesh",
       "name": "Бангладеш",
       "interfaceLang": "en",
-      "resultLangs": "en, bn",
+      "resultLangs": "bn",
       "region": "BD",
-      "queries": [
-        "(BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Bangladesh AND (BAEC OR \"nuclear power plant\"))",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
-      ],
       "profileGroup": "Южная Азия",
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -62,7 +58,11 @@
           ]
         }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "(BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Bangladesh AND (BAEC OR \"nuclear power plant\"))",
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
+      ]
     },
     {
       "id": "bolivia",
