@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T00:00:00.000Z",
+  "updatedAt": "2026-11-23T15:48:00.000Z",
   "profiles": [
     {
       "id": "argentina",
@@ -9,9 +9,9 @@
       "resultLangs": "es, en",
       "region": "AR",
       "queries": [
-        "site:.ar (\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
+        "(\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
         "site:x.com Argentina (\"energía nuclear\" OR \"industria nuclear\" OR Atucha OR Embalse) -arma -guerra -misil",
-        "(site:.ar OR site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
+        "(site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
       ],
       "profileGroup": "Латинская Америка",
       "queryGroups": [
@@ -19,7 +19,7 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.ar (\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
+            "(\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
             "site:x.com Argentina (\"energía nuclear\" OR \"industria nuclear\" OR Atucha OR Embalse) -arma -guerra -misil"
           ]
         },
@@ -27,7 +27,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.ar OR site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
+            "(site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
           ]
         }
       ],
@@ -40,9 +40,9 @@
       "resultLangs": "en, bn",
       "region": "BD",
       "queries": [
-        "site:.bd (BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
+        "(BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
         "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Bangladesh AND (BAEC OR \"nuclear power plant\"))",
-        "(site:.bd OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
       ],
       "profileGroup": "Южная Азия",
       "queryGroups": [
@@ -50,7 +50,7 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.bd (BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
+            "(BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
             "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Bangladesh AND (BAEC OR \"nuclear power plant\"))"
           ]
         },
@@ -58,7 +58,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.bd OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
+            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
           ]
         }
       ],
@@ -71,9 +71,9 @@
       "resultLangs": "es, en",
       "region": "BO",
       "queries": [
-        "site:.bo Bolivia (\"energía nuclear\" OR SMR OR litio OR YLB) -arma -guerra -misil",
+        "Bolivia (\"energía nuclear\" OR SMR OR litio OR YLB) -arma -guerra -misil",
         "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Bolivia (litio OR YLB OR \"industria del litio\" OR \"carbonato de litio\")",
-        "(site:.bo OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR CIDTN OR \"Centro Nuclear El Alto\") Bolivia -site:.ru"
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR CIDTN OR \"Centro Nuclear El Alto\") Bolivia -site:.ru"
       ],
       "profileGroup": "Латинская Америка",
       "queryGroups": [
@@ -81,7 +81,7 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.bo Bolivia (\"energía nuclear\" OR SMR OR litio OR YLB) -arma -guerra -misil",
+            "Bolivia (\"energía nuclear\" OR SMR OR litio OR YLB) -arma -guerra -misil",
             "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Bolivia (litio OR YLB OR \"industria del litio\" OR \"carbonato de litio\")"
           ]
         },
@@ -89,7 +89,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.bo OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR CIDTN OR \"Centro Nuclear El Alto\") Bolivia -site:.ru"
+            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR CIDTN OR \"Centro Nuclear El Alto\") Bolivia -site:.ru"
           ]
         }
       ],
@@ -102,9 +102,9 @@
       "resultLangs": "pt, en",
       "region": "BR",
       "queries": [
-        "site:.br (\"energia nuclear\" OR \"usina nuclear\" OR \"Angra 3\" OR Eletronuclear OR \"política nuclear\" OR \"medicina nuclear\" OR radioisótopos OR RMB OR CNEN OR urânio) -arma -guerra -míssil",
+        "(\"energia nuclear\" OR \"usina nuclear\" OR \"Angra 3\" OR Eletronuclear OR \"política nuclear\" OR \"medicina nuclear\" OR radioisótopos OR RMB OR CNEN OR urânio) -arma -guerra -míssil",
         "(site:x.com OR site:facebook.com OR site:instagram.com) (\"usina nuclear\" OR Eletronuclear OR \"Angra 3\") Brasil -arma -guerra -míssil",
-        "(site:.br OR site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR TVEL) Brasil -site:.ru"
+        "(site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR TVEL) Brasil -site:.ru"
       ],
       "profileGroup": "Латинская Америка",
       "queryGroups": [
@@ -112,7 +112,7 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.br (\"energia nuclear\" OR \"usina nuclear\" OR \"Angra 3\" OR Eletronuclear OR \"política nuclear\" OR \"medicina nuclear\" OR radioisótopos OR RMB OR CNEN OR urânio) -arma -guerra -míssil",
+            "(\"energia nuclear\" OR \"usina nuclear\" OR \"Angra 3\" OR Eletronuclear OR \"política nuclear\" OR \"medicina nuclear\" OR radioisótopos OR RMB OR CNEN OR urânio) -arma -guerra -míssil",
             "(site:x.com OR site:facebook.com OR site:instagram.com) (\"usina nuclear\" OR Eletronuclear OR \"Angra 3\") Brasil -arma -guerra -míssil"
           ]
         },
@@ -120,7 +120,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.br OR site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR TVEL) Brasil -site:.ru"
+            "(site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR TVEL) Brasil -site:.ru"
           ]
         }
       ],
@@ -133,9 +133,9 @@
       "resultLangs": "vi",
       "region": "VN",
       "queries": [
-        "site:.vn (\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
-        "site:.vn (\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")",
-        "site:.vn (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Vietnam -site:.ru",
+        "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
+        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")",
+        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Vietnam -site:.ru",
         "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
       ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
@@ -144,15 +144,15 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.vn (\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
-            "site:.vn (\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")"
+            "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
+            "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "site:.vn (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Vietnam -site:.ru",
+            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Vietnam -site:.ru",
             "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
           ]
         }
@@ -166,10 +166,10 @@
       "resultLangs": "en",
       "region": "IN",
       "queries": [
-        "site:.in (\"nuclear energy\" OR \"nuclear power plant\" OR NPCIL OR \"Department of Atomic Energy\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\") -weapon -missile",
-        "site:.in (\"Northern Sea Route\" OR Arctic OR containers OR logistics OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR renewables OR \"rare earths\" OR \"back-end\")",
+        "(\"nuclear energy\" OR \"nuclear power plant\" OR NPCIL OR \"Department of Atomic Energy\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\") -weapon -missile",
+        "(\"Northern Sea Route\" OR Arctic OR containers OR logistics OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR renewables OR \"rare earths\" OR \"back-end\")",
         "(site:x.com OR site:facebook.com OR site:instagram.com) India (nuclear OR NPCIL OR \"medical isotopes\" OR \"Arctic shipping\")",
-        "(site:.in OR site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR Kudankulam OR KKNPP OR \"Kudankulam Nuclear Power Project\" OR TVEL) India -site:.ru"
+        "(site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR Kudankulam OR KKNPP OR \"Kudankulam Nuclear Power Project\" OR TVEL) India -site:.ru"
       ],
       "profileGroup": "Южная Азия",
       "queryGroups": [
@@ -177,8 +177,8 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.in (\"nuclear energy\" OR \"nuclear power plant\" OR NPCIL OR \"Department of Atomic Energy\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\") -weapon -missile",
-            "site:.in (\"Northern Sea Route\" OR Arctic OR containers OR logistics OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR renewables OR \"rare earths\" OR \"back-end\")",
+            "(\"nuclear energy\" OR \"nuclear power plant\" OR NPCIL OR \"Department of Atomic Energy\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\") -weapon -missile",
+            "(\"Northern Sea Route\" OR Arctic OR containers OR logistics OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR renewables OR \"rare earths\" OR \"back-end\")",
             "(site:x.com OR site:facebook.com OR site:instagram.com) India (nuclear OR NPCIL OR \"medical isotopes\" OR \"Arctic shipping\")"
           ]
         },
@@ -186,7 +186,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.in OR site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR Kudankulam OR KKNPP OR \"Kudankulam Nuclear Power Project\" OR TVEL) India -site:.ru"
+            "(site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR Kudankulam OR KKNPP OR \"Kudankulam Nuclear Power Project\" OR TVEL) India -site:.ru"
           ]
         }
       ],
@@ -199,10 +199,10 @@
       "resultLangs": "id",
       "region": "ID",
       "queries": [
-        "site:.id -site:go.id -site:ac.id (\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
-        "site:.id -site:go.id -site:ac.id (\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
-        "site:.id -site:go.id -site:ac.id (\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")",
-        "site:.id (Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
+        "(\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
+        "(\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
+        "(\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")",
+        "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
         "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
       ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
@@ -211,16 +211,16 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.id -site:go.id -site:ac.id (\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
-            "site:.id -site:go.id -site:ac.id (\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
-            "site:.id -site:go.id -site:ac.id (\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")"
+            "(\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
+            "(\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
+            "(\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "site:.id (Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
+            "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
             "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
           ]
         }
@@ -234,9 +234,9 @@
       "resultLangs": "zh-CN",
       "region": "HK",
       "queries": [
-        "site:cn (核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
-        "site:cn (\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")",
-        "site:cn (Rosatom OR Росатом OR 中国) China -site:.ru",
+        "(核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
+        "(\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")",
+        "(Rosatom OR Росатом OR 中国) China -site:.ru",
         "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
       ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
@@ -245,15 +245,15 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:cn (核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
-            "site:cn (\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")"
+            "(核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
+            "(\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "site:cn (Rosatom OR Росатом OR 中国) China -site:.ru",
+            "(Rosatom OR Росатом OR 中国) China -site:.ru",
             "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
           ]
         }
@@ -267,9 +267,9 @@
       "resultLangs": "es, en",
       "region": "CU",
       "queries": [
-        "site:.cu (\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
+        "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
         "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Cuba (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra",
-        "(site:.cu OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Cuba -site:.ru"
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Cuba -site:.ru"
       ],
       "profileGroup": "Латинская Америка",
       "queryGroups": [
@@ -277,7 +277,7 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.cu (\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
+            "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
             "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Cuba (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra"
           ]
         },
@@ -285,7 +285,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.cu OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Cuba -site:.ru"
+            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Cuba -site:.ru"
           ]
         }
       ],
@@ -298,10 +298,10 @@
       "resultLangs": "en, ms",
       "region": "MY",
       "queries": [
-        "site:.my (\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\")",
-        "site:.my (\"Northern Sea Route\" OR \"blue economy\" OR icebreaker OR \"energy storage\" OR \"rare earths\" OR \"coal phase-out\" OR \"energy transition\" OR decommissioning OR tariffs OR CRESS OR MyPower)",
+        "(\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\")",
+        "(\"Northern Sea Route\" OR \"blue economy\" OR icebreaker OR \"energy storage\" OR \"rare earths\" OR \"coal phase-out\" OR \"energy transition\" OR decommissioning OR tariffs OR CRESS OR MyPower)",
         "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Malaysia (\"nuclear energy\" OR \"Northern Sea Route\" OR \"energy storage\")",
-        "(site:.my OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR TVEL) Malaysia -site:.ru"
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR TVEL) Malaysia -site:.ru"
       ],
       "profileGroup": "Южная Азия",
       "queryGroups": [
@@ -309,8 +309,8 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.my (\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\")",
-            "site:.my (\"Northern Sea Route\" OR \"blue economy\" OR icebreaker OR \"energy storage\" OR \"rare earths\" OR \"coal phase-out\" OR \"energy transition\" OR decommissioning OR tariffs OR CRESS OR MyPower)",
+            "(\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\")",
+            "(\"Northern Sea Route\" OR \"blue economy\" OR icebreaker OR \"energy storage\" OR \"rare earths\" OR \"coal phase-out\" OR \"energy transition\" OR decommissioning OR tariffs OR CRESS OR MyPower)",
             "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Malaysia (\"nuclear energy\" OR \"Northern Sea Route\" OR \"energy storage\")"
           ]
         },
@@ -318,7 +318,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.my OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR TVEL) Malaysia -site:.ru"
+            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR TVEL) Malaysia -site:.ru"
           ]
         }
       ],
@@ -331,9 +331,9 @@
       "resultLangs": "es, en",
       "region": "MX",
       "queries": [
-        "site:.mx (\"energía nuclear\" OR nucleoeléctrica OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra",
+        "(\"energía nuclear\" OR nucleoeléctrica OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra",
         "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) México (\"energía nuclear\" OR \"central nuclear\" OR nucleoeléctrica)",
-        "(site:.mx OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") México -site:.ru"
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") México -site:.ru"
       ],
       "profileGroup": "Латинская Америка",
       "queryGroups": [
@@ -341,7 +341,7 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.mx (\"energía nuclear\" OR nucleoeléctrica OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra",
+            "(\"energía nuclear\" OR nucleoeléctrica OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra",
             "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) México (\"energía nuclear\" OR \"central nuclear\" OR nucleoeléctrica)"
           ]
         },
@@ -349,7 +349,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.mx OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") México -site:.ru"
+            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") México -site:.ru"
           ]
         }
       ],
@@ -362,9 +362,9 @@
       "resultLangs": "en",
       "region": "MM",
       "queries": [
-        "(site:mm OR site:com.mm) (\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
-        "(site:mm OR site:com.mm OR site:org.mm) (\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
-        "(site:mm OR site:com.mm OR site:org.mm) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
+        "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
+        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
+        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
       ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroups": [
@@ -372,15 +372,15 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "(site:mm OR site:com.mm) (\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
-            "(site:mm OR site:com.mm OR site:org.mm) (\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")"
+            "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
+            "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:mm OR site:com.mm OR site:org.mm) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
+            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
           ]
         }
       ],
@@ -393,9 +393,9 @@
       "resultLangs": "es, en",
       "region": "PY",
       "queries": [
-        "site:.py (\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR \"reactor modular pequeño\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
+        "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR \"reactor modular pequeño\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
         "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Paraguay (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra",
-        "(site:.py OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Paraguay -site:.ru"
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Paraguay -site:.ru"
       ],
       "profileGroup": "Латинская Америка",
       "queryGroups": [
@@ -403,7 +403,7 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.py (\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR \"reactor modular pequeño\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
+            "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR \"reactor modular pequeño\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
             "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Paraguay (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra"
           ]
         },
@@ -411,7 +411,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.py OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Paraguay -site:.ru"
+            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Paraguay -site:.ru"
           ]
         }
       ],
@@ -424,10 +424,10 @@
       "resultLangs": "th, en",
       "region": "TH",
       "queries": [
-        "site:.th (\"พลังงานนิวเคลียร์\" OR \"โรงไฟฟ้านิวเคลียร์\" OR SMR OR \"เชื้อเพลิงนิวเคลียร์\" OR \"กากกัมมันตรังสี\" OR \"นโยบายพลังงานนิวเคลียร์\")",
-        "site:.th -site:go.th -site:ac.th (\"เวชศาสตร์นิวเคลียร์\" OR \"ผลิตภัณฑ์ไอโซโทป\" OR MCO OR MCL OR \"เทคโนโลยีการผลิตแบบเพิ่มเนื้อวัสดุ\" OR \"3D พิมพ์\")",
-        "site:.th (\"Northern Sea Route\" OR \"ขนส่งตู้คอนเทนเนอร์\" OR \"โลจิสติกส์ระหว่างประเทศ\" OR \"ระบบกักเก็บพลังงาน\" OR \"เรือตัดน้ำแข็งนิวเคลียร์\")",
-        "site:.th (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Thailand -site:.ru"
+        "(\"พลังงานนิวเคลียร์\" OR \"โรงไฟฟ้านิวเคลียร์\" OR SMR OR \"เชื้อเพลิงนิวเคลียร์\" OR \"กากกัมมันตรังสี\" OR \"นโยบายพลังงานนิวเคลียร์\")",
+        "(\"เวชศาสตร์นิวเคลียร์\" OR \"ผลิตภัณฑ์ไอโซโทป\" OR MCO OR MCL OR \"เทคโนโลยีการผลิตแบบเพิ่มเนื้อวัสดุ\" OR \"3D พิมพ์\")",
+        "(\"Northern Sea Route\" OR \"ขนส่งตู้คอนเทนเนอร์\" OR \"โลจิสติกส์ระหว่างประเทศ\" OR \"ระบบกักเก็บพลังงาน\" OR \"เรือตัดน้ำแข็งนิวเคลียร์\")",
+        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Thailand -site:.ru"
       ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroups": [
@@ -435,16 +435,16 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.th (\"พลังงานนิวเคลียร์\" OR \"โรงไฟฟ้านิวเคลียร์\" OR SMR OR \"เชื้อเพลิงนิวเคลียร์\" OR \"กากกัมมันตรังสี\" OR \"นโยบายพลังงานนิวเคลียร์\")",
-            "site:.th -site:go.th -site:ac.th (\"เวชศาสตร์นิวเคลียร์\" OR \"ผลิตภัณฑ์ไอโซโทป\" OR MCO OR MCL OR \"เทคโนโลยีการผลิตแบบเพิ่มเนื้อวัสดุ\" OR \"3D พิมพ์\")",
-            "site:.th (\"Northern Sea Route\" OR \"ขนส่งตู้คอนเทนเนอร์\" OR \"โลจิสติกส์ระหว่างประเทศ\" OR \"ระบบกักเก็บพลังงาน\" OR \"เรือตัดน้ำแข็งนิวเคลียร์\")"
+            "(\"พลังงานนิวเคลียร์\" OR \"โรงไฟฟ้านิวเคลียร์\" OR SMR OR \"เชื้อเพลิงนิวเคลียร์\" OR \"กากกัมมันตรังสี\" OR \"นโยบายพลังงานนิวเคลียร์\")",
+            "(\"เวชศาสตร์นิวเคลียร์\" OR \"ผลิตภัณฑ์ไอโซโทป\" OR MCO OR MCL OR \"เทคโนโลยีการผลิตแบบเพิ่มเนื้อวัสดุ\" OR \"3D พิมพ์\")",
+            "(\"Northern Sea Route\" OR \"ขนส่งตู้คอนเทนเนอร์\" OR \"โลจิสติกส์ระหว่างประเทศ\" OR \"ระบบกักเก็บพลังงาน\" OR \"เรือตัดน้ำแข็งนิวเคลียร์\")"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "site:.th (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Thailand -site:.ru"
+            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Thailand -site:.ru"
           ]
         }
       ],
@@ -457,8 +457,8 @@
       "resultLangs": "en",
       "region": "PH",
       "queries": [
-        "site:.ph -site:gov.ph -site:edu.ph (\"nuclear power\" OR \"nuclear energy\" OR \"nuclear plant\" OR \"Bataan Nuclear Power Plant\" OR SMR)",
-        "site:.ph (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Philippines -site:.ru"
+        "(\"nuclear power\" OR \"nuclear energy\" OR \"nuclear plant\" OR \"Bataan Nuclear Power Plant\" OR SMR)",
+        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Philippines -site:.ru"
       ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroups": [
@@ -466,14 +466,14 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.ph -site:gov.ph -site:edu.ph (\"nuclear power\" OR \"nuclear energy\" OR \"nuclear plant\" OR \"Bataan Nuclear Power Plant\" OR SMR)"
+            "(\"nuclear power\" OR \"nuclear energy\" OR \"nuclear plant\" OR \"Bataan Nuclear Power Plant\" OR SMR)"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "site:.ph (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Philippines -site:.ru"
+            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Philippines -site:.ru"
           ]
         }
       ],
@@ -486,9 +486,9 @@
       "resultLangs": "es, en",
       "region": "CL",
       "queries": [
-        "site:.cl (\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
+        "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
         "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Chile (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra",
-        "(site:.cl OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Chile -site:.ru"
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Chile -site:.ru"
       ],
       "profileGroup": "Латинская Америка",
       "queryGroups": [
@@ -496,7 +496,7 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.cl (\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
+            "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
             "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Chile (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra"
           ]
         },
@@ -504,7 +504,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.cl OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Chile -site:.ru"
+            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Chile -site:.ru"
           ]
         }
       ],
@@ -517,10 +517,10 @@
       "resultLangs": "en",
       "region": "LK",
       "queries": [
-        "site:.lk (\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"isotope production\" OR \"irradiation technology\") -weapon -missile",
-        "site:.lk (\"Northern Sea Route\" OR Arctic OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR batteries OR \"back-end\" OR renewables OR \"rare earths\")",
+        "(\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"isotope production\" OR \"irradiation technology\") -weapon -missile",
+        "(\"Northern Sea Route\" OR Arctic OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR batteries OR \"back-end\" OR renewables OR \"rare earths\")",
         "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (\"Sri Lanka\" AND (\"nuclear energy\" OR \"medical isotopes\" OR \"Arctic shipping\" OR \"rare earths\")) -weapon",
-        "(site:.lk OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"Sri Lanka\" -site:.ru"
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"Sri Lanka\" -site:.ru"
       ],
       "profileGroup": "Южная Азия",
       "queryGroups": [
@@ -528,8 +528,8 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.lk (\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"isotope production\" OR \"irradiation technology\") -weapon -missile",
-            "site:.lk (\"Northern Sea Route\" OR Arctic OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR batteries OR \"back-end\" OR renewables OR \"rare earths\")",
+            "(\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"isotope production\" OR \"irradiation technology\") -weapon -missile",
+            "(\"Northern Sea Route\" OR Arctic OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR batteries OR \"back-end\" OR renewables OR \"rare earths\")",
             "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (\"Sri Lanka\" AND (\"nuclear energy\" OR \"medical isotopes\" OR \"Arctic shipping\" OR \"rare earths\")) -weapon"
           ]
         },
@@ -537,7 +537,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(site:.lk OR site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"Sri Lanka\" -site:.ru"
+            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"Sri Lanka\" -site:.ru"
           ]
         }
       ],
@@ -550,10 +550,10 @@
       "resultLangs": "ko, en",
       "region": "KR",
       "queries": [
-        "site:.kr -site:go.kr -site:ac.kr (원전 OR 원자력 OR 원자력발전소 OR 핵연료 OR 핵연료주기 OR SMR OR 소형모듈원전)",
-        "site:.kr -site:go.kr -site:ac.kr (핵의학 OR 방사성동위원소 OR 동위원소 OR 핵연료주기 OR 증강제조 OR 3D프린팅)",
-        "site:.kr -site:go.kr -site:ac.kr (북극항로 OR 북극해 OR 북극항해 OR 컨테이너운송 OR 해상운송 OR 국제물류 OR 블루이코노미 OR 해양경제 OR 에너지저장장치 OR ESS OR 원자력쇄빙선)",
-        "site:.kr (Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"South Korea\" -site:.ru"
+        "(원전 OR 원자력 OR 원자력발전소 OR 핵연료 OR 핵연료주기 OR SMR OR 소형모듈원전)",
+        "(핵의학 OR 방사성동위원소 OR 동위원소 OR 핵연료주기 OR 증강제조 OR 3D프린팅)",
+        "(북극항로 OR 북극해 OR 북극항해 OR 컨테이너운송 OR 해상운송 OR 국제물류 OR 블루이코노미 OR 해양경제 OR 에너지저장장치 OR ESS OR 원자력쇄빙선)",
+        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"South Korea\" -site:.ru"
       ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroups": [
@@ -561,16 +561,16 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.kr -site:go.kr -site:ac.kr (원전 OR 원자력 OR 원자력발전소 OR 핵연료 OR 핵연료주기 OR SMR OR 소형모듈원전)",
-            "site:.kr -site:go.kr -site:ac.kr (핵의학 OR 방사성동위원소 OR 동위원소 OR 핵연료주기 OR 증강제조 OR 3D프린팅)",
-            "site:.kr -site:go.kr -site:ac.kr (북극항로 OR 북극해 OR 북극항해 OR 컨테이너운송 OR 해상운송 OR 국제물류 OR 블루이코노미 OR 해양경제 OR 에너지저장장치 OR ESS OR 원자력쇄빙선)"
+            "(원전 OR 원자력 OR 원자력발전소 OR 핵연료 OR 핵연료주기 OR SMR OR 소형모듈원전)",
+            "(핵의학 OR 방사성동위원소 OR 동위원소 OR 핵연료주기 OR 증강제조 OR 3D프린팅)",
+            "(북극항로 OR 북극해 OR 북극항해 OR 컨테이너운송 OR 해상운송 OR 국제물류 OR 블루이코노미 OR 해양경제 OR 에너지저장장치 OR ESS OR 원자력쇄빙선)"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "site:.kr (Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"South Korea\" -site:.ru"
+            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"South Korea\" -site:.ru"
           ]
         }
       ],
@@ -583,9 +583,9 @@
       "resultLangs": "ja, en",
       "region": "JP",
       "queries": [
-        "site:.jp -site:go.jp -site:ac.jp (原発 OR 原子力 OR 原子力発電所 OR 原発建設 OR 核燃料 OR 燃料サイクル OR 原子力政策 OR エネルギー政策 OR 世論 OR 国民世論)",
-        "site:.jp -site:go.jp -site:ac.jp (核医学 OR 放射性同位体 OR ラジオアイソトープ OR 核燃料施設 OR 増材製造 OR \"3D プリンティング\")",
-        "site:.jp (Rosatom OR Росатом OR 日本) Japan -site:.ru"
+        "(原発 OR 原子力 OR 原子力発電所 OR 原発建設 OR 核燃料 OR 燃料サイクル OR 原子力政策 OR エネルギー政策 OR 世論 OR 国民世論)",
+        "(核医学 OR 放射性同位体 OR ラジオアイソトープ OR 核燃料施設 OR 増材製造 OR \"3D プリンティング\")",
+        "(Rosatom OR Росатом OR 日本) Japan -site:.ru"
       ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroups": [
@@ -593,15 +593,15 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "site:.jp -site:go.jp -site:ac.jp (原発 OR 原子力 OR 原子力発電所 OR 原発建設 OR 核燃料 OR 燃料サイクル OR 原子力政策 OR エネルギー政策 OR 世論 OR 国民世論)",
-            "site:.jp -site:go.jp -site:ac.jp (核医学 OR 放射性同位体 OR ラジオアイソトープ OR 核燃料施設 OR 増材製造 OR \"3D プリンティング\")"
+            "(原発 OR 原子力 OR 原子力発電所 OR 原発建設 OR 核燃料 OR 燃料サイクル OR 原子力政策 OR エネルギー政策 OR 世論 OR 国民世論)",
+            "(核医学 OR 放射性同位体 OR ラジオアイソトープ OR 核燃料施設 OR 増材製造 OR \"3D プリンティング\")"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "site:.jp (Rosatom OR Росатом OR 日本) Japan -site:.ru"
+            "(Rosatom OR Росатом OR 日本) Japan -site:.ru"
           ]
         }
       ],
