@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T21:04:43.134Z",
+  "updatedAt": "2026-11-23T21:05:50.079Z",
   "profiles": [
     {
       "id": "argentina",
@@ -353,7 +353,7 @@
       "id": "myanmar",
       "name": "Мьянма",
       "interfaceLang": "my",
-      "resultLangs": "",
+      "resultLangs": "en",
       "region": "MM",
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 2,
