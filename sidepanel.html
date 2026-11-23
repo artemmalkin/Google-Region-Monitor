@@ -164,7 +164,10 @@
           <option value="5">5 страниц</option>
           <option value="10">10 страниц</option>
         </select>
-        <p class="field-help">Сбор идёт последовательно с паузой между страницами. CAPTCHA и страницы согласия не обходятся.</p>
+        <label class="field-label" for="google-search-min-interval-seconds">Минимальный интервал между запросами Google (сек.)</label>
+        <input id="google-search-min-interval-seconds" type="number" min="0" max="600" step="1" value="2" inputmode="numeric">
+        <p class="field-help">Один общий интервал для всех поисковых запросов и переходов пагинации, включая первое открытие выдачи. Значение 0 отключает ожидание; настройка действует на все окна расширения.</p>
+        <p class="field-help">CAPTCHA и страницы согласия не обходятся.</p>
         <label class="restore-after-monitor">
           <input id="chatgpt-region-filter-enabled" type="checkbox" checked>
           <span>Проверять региональную принадлежность СМИ через ChatGPT перед созданием отчёта</span>

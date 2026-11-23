@@ -1,6 +1,11 @@
 importScripts('github-config.js');
 const STANDARD_SYNC_ALARM = 'google-region-monitor-standard-profiles-daily';
 const DAY_MS = 24 * 60 * 60 * 1000;
+const GOOGLE_SEARCH_INTERVAL_SETTING = 'googleSearchMinIntervalSeconds';
+const GOOGLE_SEARCH_LAST_REQUEST_SETTING = 'googleSearchLastRequestAt';
+let googleSearchRateLimitQueue = Promise.resolve();
+let googleSearchLastRequestAtInMemory = 0;
+const googleSearchSlotStates = new Map();
 
 chrome.runtime.onInstalled.addListener(async () => {
   await configureSidePanel();
@@ -20,8 +25,84 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     syncStandardProfiles(!!message.force).then(sendResponse).catch((error) => sendResponse({ ok: false, error: error.message || String(error) }));
     return true;
   }
+
+  if (message?.type === 'WAIT_FOR_GOOGLE_SEARCH_SLOT') {
+    const requestId = String(message.requestId || '');
+    if (!requestId) {
+      sendResponse({ ok: false, error: 'Не указан ID запроса Google.' });
+      return false;
+    }
+    const tabId = Number(message.tabId);
+    const url = String(message.url || '');
+    if (!Number.isInteger(tabId) || tabId <= 0 || !url) {
+      sendResponse({ ok: false, error: 'Не указана вкладка или URL поискового запроса Google.' });
+      return false;
+    }
+    const state = { cancelled: false, done: false };
+    googleSearchSlotStates.set(requestId, state);
+    const run = () => reserveGoogleSearchSlot(state, tabId, url);
+    const result = googleSearchRateLimitQueue.then(run, run);
+    googleSearchRateLimitQueue = result.catch(() => {});
+    result.then(sendResponse).catch((error) => sendResponse({ ok: false, error: error?.message || String(error) }))
+      .finally(() => {
+        state.done = true;
+        googleSearchSlotStates.delete(requestId);
+      });
+    return true;
+  }
+
+  if (message?.type === 'CANCEL_GOOGLE_SEARCH_SLOT') {
+    const state = googleSearchSlotStates.get(String(message.requestId || ''));
+    if (state && !state.done) state.cancelled = true;
+    sendResponse({ ok: true });
+    return false;
+  }
+
   return false;
 });
+
+async function reserveGoogleSearchSlot(state, tabId, url) {
+  if (state.cancelled) return { ok: false, cancelled: true };
+
+  const searchUrl = new URL(url);
+  if (searchUrl.protocol !== 'https:'
+    || !(searchUrl.hostname === 'google.com' || searchUrl.hostname.endsWith('.google.com'))
+    || searchUrl.pathname !== '/search') {
+    throw new Error('Ограничитель принимает только HTTPS-адреса Google Search.');
+  }
+
+  const stored = await chrome.storage.local.get({
+    [GOOGLE_SEARCH_INTERVAL_SETTING]: 2,
+    [GOOGLE_SEARCH_LAST_REQUEST_SETTING]: 0
+  });
+  const configured = Number(stored[GOOGLE_SEARCH_INTERVAL_SETTING]);
+  const intervalSeconds = Number.isFinite(configured)
+    ? Math.max(0, Math.min(600, Math.floor(configured)))
+    : 2;
+  const persistedLastRequestAt = Math.max(0, Number(stored[GOOGLE_SEARCH_LAST_REQUEST_SETTING]) || 0);
+  const lastRequestAt = Math.max(persistedLastRequestAt, googleSearchLastRequestAtInMemory);
+  const nextAllowedAt = lastRequestAt + intervalSeconds * 1000;
+  let remainingMs = Math.max(0, nextAllowedAt - Date.now());
+  let waitedMs = 0;
+
+  // Short slices keep the Stop button responsive even for a long configured interval.
+  while (remainingMs > 0) {
+    if (state.cancelled) return { ok: false, cancelled: true };
+    const slice = Math.min(remainingMs, 250);
+    await sleep(slice);
+    waitedMs += slice;
+    remainingMs = Math.max(0, nextAllowedAt - Date.now());
+  }
+  if (state.cancelled) return { ok: false, cancelled: true };
+
+  // Start the actual tab navigation inside the serialized worker queue. This
+  // prevents delays between granting a slot and the side panel issuing the request.
+  await chrome.tabs.update(tabId, { url: searchUrl.toString(), active: true });
+  const grantedAt = Date.now();
+  googleSearchLastRequestAtInMemory = grantedAt;
+  await chrome.storage.local.set({ [GOOGLE_SEARCH_LAST_REQUEST_SETTING]: grantedAt });
+  return { ok: true, intervalSeconds, waitedMs, grantedAt };
+}
 
 async function configureSidePanel() {
   try { await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }); } catch (_) {}
@@ -481,7 +562,7 @@ async function ensureChatGPTReasoningMode(tabId, effort = 'medium', timeoutMs = 
           };
 
           const picker = Array.from(document.querySelectorAll(
-            'form[data-chatgpt-composer] button[data-composer-navigation-target="reasoning"][aria-haspopup="menu"], button[data-composer-navigation-target="reasoning"][aria-haspopup="menu"], button[aria-label="Выбрать модель ChatGPT"][aria-haspopup="menu"]'
+            'form[data-chatgpt-composer] button[data-composer-navigation-target="reasoning"][aria-haspopup="menu"], button[data-composer-navigation-target="reasoning"][aria-haspopup="menu"], button[aria-label="Выбрать модель ChatGPT"][aria-haspopup="menu"], button[aria-label="Choose ChatGPT model"][aria-haspopup="menu"]'
           )).find(isVisible);
 
           // Подписочный интерфейс: выпадающий переключатель уровня reasoning.
@@ -502,7 +583,7 @@ async function ensureChatGPTReasoningMode(tabId, effort = 'medium', timeoutMs = 
               low: ['low', 'низкий', 'низкое', 'минимальный', 'минимальное', 'легкий', 'лёгкий', 'меньше'],
               medium: ['medium', 'средний', 'среднее', 'обычный', 'стандартный'],
               high: ['high', 'высокий', 'высокое', 'больше'],
-              xhigh: ['xhigh', 'extra high', 'very high', 'максимальный', 'максимальное', 'максимум', 'очень высокий']
+              xhigh: ['xhigh', 'extra high', 'extra-high', 'very high', 'максимальный', 'максимальное', 'максимум', 'максимально высокий', 'очень высокий']
             };
             const selectors = [
               '[role="menuitemradio"]', '[role="menuitemcheckbox"]', '[role="option"]', '[role="menuitem"]', '[role="radio"]',
@@ -523,7 +604,7 @@ async function ensureChatGPTReasoningMode(tabId, effort = 'medium', timeoutMs = 
               return '';
             };
 
-            // Предпочитаем пункты меню с явной ролью/атрибутом, а не внешние контейнеры.
+            // В первую очередь используются пункты меню/контролы с явными ролями и атрибутами; текстовая проверка оставляет совместимость с кнопками меню.
             const option = candidates.find((el) => identify(el) === requestedEffort);
             if (option) {
               option.click();

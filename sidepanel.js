@@ -20,6 +20,7 @@ let stopSignalPromise = null;
 const REGION_CHATGPT_FILTER_SETTING = 'regionMediaChatGPTFilterEnabled';
 const REGION_CHATGPT_REASONING_SETTING = 'regionMediaChatGPTReasoningEnabled';
 const REGION_CHATGPT_REASONING_EFFORT_SETTING = 'regionMediaChatGPTReasoningEffort';
+const GOOGLE_SEARCH_MIN_INTERVAL_SETTING = 'googleSearchMinIntervalSeconds';
 
 const $ = (id) => document.getElementById(id);
 function makeId() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
@@ -854,7 +855,7 @@ function createReportHtml(report) {
 <style>
 :root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}.filter-summary{padding:10px 12px;background:#f1f5fb;border-radius:8px;font-size:12px}.filter-summary.warning{color:#8b1e1e;background:#fce8e6}.hidden-results{margin:18px 0;padding:14px 16px;background:#fff;border:1px solid #e3e6eb;border-radius:12px}.hidden-results summary{cursor:pointer;font-weight:700;color:#3c4043}.hidden-intro{font-size:12px;color:#687078}.hidden-result{padding:12px 0;border-top:1px dashed #e5e8ec}.exclusion-reason{padding:9px 11px;background:#fff7e6;border-radius:7px;font-size:12px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
-<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Настройки Google Preferences:</b> ${report.preferencesApplied ? 'подтверждены перед началом мониторинга' : 'не подтверждены'}<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : 'Завершён'}</p>${filterSummary}</header>
+<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Настройки Google Preferences:</b> ${report.preferencesApplied ? 'подтверждены перед началом мониторинга' : 'не подтверждены'}<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Минимальный интервал Google:</b> ${Number(report.googleSearchMinIntervalSeconds ?? 2)} сек.<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : report.googleBlocked ? 'Google ограничил запросы; сохранены ранее собранные результаты' : 'Завершён'}</p>${filterSummary}</header>
 ${rows}
 ${hiddenSection}
 <footer>Отчёт создан расширением Google Region Monitor. Ссылки на результаты открываются в новых вкладках.</footer></body></html>`;
@@ -862,10 +863,36 @@ ${hiddenSection}
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
+async function waitForGlobalGoogleSearchSlot(tabId, url) {
+  const requestId = makeId();
+  const slotPromise = chrome.runtime.sendMessage({ type: 'WAIT_FOR_GOOGLE_SEARCH_SLOT', requestId, tabId, url });
+  const outcome = await Promise.race([
+    slotPromise.then((slot) => ({ slot })),
+    stopSignalPromise.then(() => ({ cancelled: true }))
+  ]);
+
+  if (outcome.cancelled) {
+    chrome.runtime.sendMessage({ type: 'CANCEL_GOOGLE_SEARCH_SLOT', requestId }).catch(() => {});
+    return { cancelled: true };
+  }
+  if (outcome.slot?.cancelled) return { cancelled: true };
+  if (!outcome.slot?.ok) {
+    throw new Error(outcome.slot?.error || 'Не удалось получить слот для поискового запроса Google.');
+  }
+  return outcome.slot;
+}
+
 async function navigateTabAndExtract(tabId, url) {
   const currentTab = await chrome.tabs.get(tabId);
   if (currentTab.url !== url) {
-    await chrome.tabs.update(tabId, { url, active: true });
+    const parsedUrl = new URL(url);
+    if ((parsedUrl.hostname === 'google.com' || parsedUrl.hostname.endsWith('.google.com')) && parsedUrl.pathname === '/search') {
+      const slot = await waitForGlobalGoogleSearchSlot(tabId, url);
+      if (slot.cancelled || stopRequested) return { cancelled: true, results: [] };
+      if (slot.waitedMs >= 250) addLog(`Глобальный интервал Google: ожидание ${(slot.waitedMs / 1000).toFixed(1)} сек.`);
+    } else {
+      await chrome.tabs.update(tabId, { url, active: true });
+    }
   }
   await activateAndFocusTab(tabId);
   const loadResult = await waitForTabComplete(tabId, 35000, stopSignalPromise);
@@ -1095,6 +1122,29 @@ async function loadRegionChatGPTFilterSetting() {
   $('chatgpt-region-reasoning-effort').disabled = !$('chatgpt-region-reasoning-enabled').checked;
 }
 
+function normalizeGoogleSearchMinInterval(value) {
+  if (String(value ?? '').trim() === '') return 2;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 2;
+  return Math.max(0, Math.min(600, Math.floor(parsed)));
+}
+
+async function loadGoogleSearchMinIntervalSetting() {
+  const stored = await chrome.storage.local.get({ [GOOGLE_SEARCH_MIN_INTERVAL_SETTING]: 2 });
+  $('google-search-min-interval-seconds').value = String(normalizeGoogleSearchMinInterval(stored[GOOGLE_SEARCH_MIN_INTERVAL_SETTING]));
+}
+
+$('google-search-min-interval-seconds').addEventListener('change', async (event) => {
+  const seconds = normalizeGoogleSearchMinInterval(event.target.value);
+  event.target.value = String(seconds);
+  try {
+    await chrome.storage.local.set({ [GOOGLE_SEARCH_MIN_INTERVAL_SETTING]: seconds });
+    addLog(`Минимальный интервал Google установлен: ${seconds} сек.`);
+  } catch (error) {
+    setStatus($('run-status'), `Не удалось сохранить интервал Google: ${error.message || String(error)}`, 'error');
+  }
+});
+
 $('chatgpt-region-filter-enabled').addEventListener('change', async (event) => {
   const enabled = !!event.target.checked;
   try {
@@ -1181,6 +1231,8 @@ $('run-report').addEventListener('click', async () => {
   const maxPages = Math.max(1, Math.min(10, Number($('max-pages').value) || 3));
   const period = $('period').value;
   const periodLabel = $('period').selectedOptions[0].textContent;
+  const googleSearchMinIntervalSeconds = normalizeGoogleSearchMinInterval($('google-search-min-interval-seconds').value);
+  $('google-search-min-interval-seconds').value = String(googleSearchMinIntervalSeconds);
   const chatGPTFilterEnabled = $('chatgpt-region-filter-enabled').checked;
   const totalSteps = queryList.length * maxPages;
   let completedSteps = 0;
@@ -1192,6 +1244,7 @@ $('run-report').addEventListener('click', async () => {
   isRunning = true;
   $('run-report').disabled = true;
   $('chatgpt-region-filter-enabled').disabled = true;
+  $('google-search-min-interval-seconds').disabled = true;
   $('chatgpt-region-reasoning-enabled').disabled = true;
   $('chatgpt-region-reasoning-effort').disabled = true;
   $('stop-monitor').disabled = true; // Enabled only after Preferences are applied.
@@ -1209,6 +1262,7 @@ $('run-report').addEventListener('click', async () => {
   const report = {
     profile: { ...profile },
     periodLabel,
+    googleSearchMinIntervalSeconds,
     createdAt: new Date().toLocaleString('ru-RU'),
     queries: [],
     selectedQueryCount: queryList.length,
@@ -1217,6 +1271,7 @@ $('run-report').addEventListener('click', async () => {
   };
 
   try {
+    await chrome.storage.local.set({ [GOOGLE_SEARCH_MIN_INTERVAL_SETTING]: googleSearchMinIntervalSeconds });
     // Apply the Monitoring profile (not the profile selected on the other tab)
     // before opening the first Google Search page.
     const { result: preferencesResult } = await applySettingsInFocusedPreferencesTab({
@@ -1239,17 +1294,18 @@ $('run-report').addEventListener('click', async () => {
     addLog(`Настройки профиля «${profile.name}» подтверждены в Google Preferences: hl=${profile.interfaceLang || 'без изменения'}, lr=${profile.resultLangs || 'без языкового фильтра'}, gl=${profile.region || 'без изменения'}.`);
     setStatus($('run-status'), `Настройки профиля «${profile.name}» применены. Перехожу к поиску…`, 'success');
 
-    const firstUrl = createSearchUrl(queryList[0], profile, period, 0);
-    const tab = await chrome.tabs.create({ url: firstUrl, active: true });
+    const tab = await chrome.tabs.create({ url: 'about:blank', active: true });
     tabId = tab.id;
     await activateAndFocusTab(tabId);
     monitoringStarted = true;
     $('stop-monitor').disabled = false;
     setStatus($('run-status'), `Запуск: ${queryList.length} запрос(ов), до ${maxPages} страниц на запрос…`);
+    addLog(`Общий минимальный интервал Google: ${googleSearchMinIntervalSeconds} сек. (для всех запросов и страниц пагинации).`);
     addLog('Включён показ похожих результатов Google (filter=0); параметр сохраняется при переходе между страницами.');
 
+    let googleBlocked = false;
     for (let queryIndex = 0; queryIndex < queryList.length; queryIndex++) {
-      if (stopRequested) { stoppedByUser = true; break; }
+      if (stopRequested || googleBlocked) { stoppedByUser = stopRequested; break; }
       const query = queryList[queryIndex];
       const queryReport = { query, pages: [], error: '' };
       report.queries.push(queryReport);
@@ -1271,7 +1327,8 @@ $('run-report').addEventListener('click', async () => {
           $('progress-bar').style.width = `${Math.min(100, completedSteps / totalSteps * 100)}%`;
           if (data.blocked) {
             queryReport.error = data.reason || 'Google ограничил автоматический просмотр страницы.';
-            addLog(`Остановка: ${queryReport.error}`);
+            googleBlocked = true;
+            addLog(`Остановка: ${queryReport.error} Дальнейшие запросы Google в этом запуске отменены.`);
             break;
           }
           queryReport.pages.push(data);
@@ -1289,16 +1346,17 @@ $('run-report').addEventListener('click', async () => {
           } else {
             break;
           }
-          await Promise.race([sleep(1400), stopSignalPromise]);
         } catch (error) {
           queryReport.error = error.message || String(error);
           addLog(`Ошибка: ${queryReport.error}`);
           break;
         }
       }
+      if (googleBlocked) break;
     }
     stoppedByUser = stoppedByUser || stopRequested;
     report.stoppedByUser = stoppedByUser;
+    report.googleBlocked = googleBlocked;
     $('stop-monitor').disabled = true;
     if (chatGPTFilterEnabled) {
       addLog('Сбор Google завершён. Перед созданием HTML-отчёта проверяю региональную принадлежность СМИ через ChatGPT.');
@@ -1329,8 +1387,10 @@ $('run-report').addEventListener('click', async () => {
           : '';
     const reportMessage = (stoppedByUser
       ? `Остановлено. Отчёт сформирован по уже собранным результатам: ${totalResults}.`
-      : `Готово. HTML-отчёт сформирован: ${totalResults} результатов.`) + filterMessage;
-    setStatus($('run-status'), reportMessage, report.mediaFilter?.status === 'failed' ? 'error' : 'success');
+      : googleBlocked
+        ? `Google ограничил запросы. Отчёт сформирован по ранее собранным результатам: ${totalResults}.`
+        : `Готово. HTML-отчёт сформирован: ${totalResults} результатов.`) + filterMessage;
+    setStatus($('run-status'), reportMessage, (googleBlocked || report.mediaFilter?.status === 'failed') ? 'error' : 'success');
   } catch (error) {
     setStatus($('run-status'), error.message || String(error), 'error');
     addLog(error.message || String(error));
@@ -1359,6 +1419,7 @@ $('run-report').addEventListener('click', async () => {
     stopSignalPromise = null;
     $('run-report').disabled = false;
     $('chatgpt-region-filter-enabled').disabled = false;
+    $('google-search-min-interval-seconds').disabled = false;
     $('chatgpt-region-reasoning-enabled').disabled = false;
     $('chatgpt-region-reasoning-effort').disabled = !$('chatgpt-region-reasoning-enabled').checked;
     $('stop-monitor').disabled = true;
@@ -1724,6 +1785,7 @@ async function initializeGitHubFeatures() {
 
 $('app-version').textContent = `v${EXTENSION_VERSION}`;
 loadRegionChatGPTFilterSetting().catch((error) => setStatus($('run-status'), `Не удалось загрузить настройку ChatGPT: ${error.message || String(error)}`, 'error'));
+loadGoogleSearchMinIntervalSetting().catch((error) => setStatus($('run-status'), `Не удалось загрузить интервал Google: ${error.message || String(error)}`, 'error'));
 loadProfiles().then(initializeGitHubFeatures).catch((error) => setStatus($('save-status'), error.message || String(error), 'error'));
 
 // Reflect a daily background sync in an already-open side panel without touching local profiles.
