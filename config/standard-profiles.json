@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T16:24:25.592Z",
+  "updatedAt": "2026-11-23T16:40:34.110Z",
   "profiles": [
     {
       "id": "argentina",
@@ -355,12 +355,8 @@
       "interfaceLang": "en",
       "resultLangs": "en",
       "region": "MM",
-      "queries": [
-        "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
-        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
-        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -374,11 +370,15 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
+            "rosatom -site:.ru"
           ]
         }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
+        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
+        "rosatom -site:.ru"
+      ]
     },
     {
       "id": "paraguay",
