@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T16:40:34.110Z",
+  "updatedAt": "2026-11-23T20:35:19.565Z",
   "profiles": [
     {
       "id": "argentina",
@@ -8,12 +8,8 @@
       "interfaceLang": "es",
       "resultLangs": "es, en",
       "region": "AR",
-      "queries": [
-        "(\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
-        "site:x.com Argentina (\"energía nuclear\" OR \"industria nuclear\" OR Atucha OR Embalse) -arma -guerra -misil",
-        "(site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
-      ],
       "profileGroup": "Латинская Америка",
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -31,7 +27,11 @@
           ]
         }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "(\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
+        "site:x.com Argentina (\"energía nuclear\" OR \"industria nuclear\" OR Atucha OR Embalse) -arma -guerra -misil",
+        "(site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
+      ]
     },
     {
       "id": "bangladesh",
