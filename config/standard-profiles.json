@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-20T08:21:23.110Z",
+  "updatedAt": "2026-11-23T11:58:34.827Z",
   "profiles": [
     {
       "id": "vietnam",
@@ -30,6 +30,23 @@
       "region": "HK",
       "queries": [
         "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
+      ]
+    },
+    {
+      "id": "braziliya-osnovnoi",
+      "name": "Бразилия Основной",
+      "interfaceLang": "pt-BR",
+      "resultLangs": "pt",
+      "region": "BR",
+      "queries": [
+        "\"energia nuclear\"",
+        "\"energia nucleoelétrica\"",
+        "\"usina nuclear\"",
+        "\"central nuclear\"",
+        "\"Angra 1\" OR \"Angra 2\" OR \"Angra 3\"",
+        "\"Eletronuclear\"",
+        "\"política nuclear brasileira\"",
+        "\"política energética nuclear\""
       ]
     }
   ]
