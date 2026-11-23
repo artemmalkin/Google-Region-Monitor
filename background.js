@@ -130,6 +130,11 @@ function normalizeRemoteProfile(raw, index) {
   const name = String(raw.name || '').trim();
   if (!name) throw new Error(`У профиля #${index + 1} отсутствует name.`);
   const queries = Array.isArray(raw.queries) ? raw.queries.map((item) => String(item).trim()).filter(Boolean) : [];
+  const queryGroups = Array.isArray(raw.queryGroups) ? raw.queryGroups.map((group, groupIndex) => ({
+    id: String(group?.id || `group-${groupIndex + 1}`).trim(),
+    name: String(group?.name || '').trim() || 'Основные запросы',
+    queries: Array.isArray(group?.queries) ? group.queries.map((item) => String(item).trim()).filter(Boolean) : []
+  })) : [];
   const resultLangs = Array.isArray(raw.resultLangs) ? raw.resultLangs.join(', ') : String(raw.resultLangs || '');
   const id = String(raw.id || `profile-${index + 1}`).trim();
   if (!/^[a-z0-9_.-]{1,80}$/i.test(id)) throw new Error(`У профиля «${name}» некорректный id.`);
@@ -138,7 +143,9 @@ function normalizeRemoteProfile(raw, index) {
     interfaceLang: String(raw.interfaceLang || '').trim(),
     resultLangs: resultLangs.trim(),
     region: String(raw.region || '').trim().toUpperCase(),
-    queries
+    ...(Object.prototype.hasOwnProperty.call(raw, 'profileGroup') ? { profileGroup: String(raw.profileGroup || '').trim() } : {}),
+    queryGroups,
+    queries: queries.length ? queries : queryGroups.flatMap((group) => group.queries)
   };
 }
 async function syncStandardProfiles(force = false) {

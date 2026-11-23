@@ -4,15 +4,18 @@ const DEFAULT_PROFILE = {
   interfaceLang: 'vi',
   resultLangs: 'vi, en',
   region: 'VN',
-  queries: ['rosatom', '"rosatom" AND "rooppur"'],
+  queryGroups: [{ id: 'main', name: 'Основные запросы', queries: ['\"nuclear energy\" OR nuclear OR \"power plant\"'] }],
+  queries: ['\"nuclear energy\" OR nuclear OR \"power plant\"'],
   profileType: 'user'
 };
 
 let standardProfiles = [];
 let userProfiles = [];
 let profiles = [];
+let bundledStandardProfilesPromise = null;
 let selectedProfileKey = null;
 let monitorProfileKey = null;
+let standardProfileOverrides = {};
 let isRunning = false;
 let stopRequested = false;
 let stopSignalResolver = null;
@@ -25,10 +28,113 @@ const GOOGLE_SEARCH_MIN_INTERVAL_SETTING = 'googleSearchMinIntervalSeconds';
 const $ = (id) => document.getElementById(id);
 function makeId() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
 function profileKey(profile) { return profile.profileType === 'standard' ? `std:${profile.id}` : `usr:${profile.id}`; }
+function compareProfileNames(a, b) {
+  const byName = String(a.name || '').localeCompare(String(b.name || ''), 'ru', { sensitivity: 'base', numeric: true });
+  return byName || String(a.id || '').localeCompare(String(b.id || ''), 'en', { sensitivity: 'base', numeric: true });
+}
 function rebuildProfiles() {
+  // Keep source/JSON order intact in memory. Alphabetical order is a UI concern
+  // and is applied explicitly whenever the selectors are rendered.
   standardProfiles = standardProfiles.map((profile) => ({ ...profile, profileType: 'standard' }));
   userProfiles = userProfiles.map((profile) => ({ ...profile, profileType: 'user' }));
-  profiles = [...standardProfiles, ...userProfiles];
+  profiles = [...standardProfiles, ...userProfiles].sort((a, b) => {
+    const typeOrder = (a.profileType === 'standard' ? 0 : 1) - (b.profileType === 'standard' ? 0 : 1);
+    return typeOrder || compareProfileNames(a, b);
+  });
+}
+function sortedProfilesForDropdown(items) {
+  return [...(Array.isArray(items) ? items : [])].sort(compareProfileNames);
+}
+function normalizeProfileQueryGroups(profile) {
+  const rawGroups = Array.isArray(profile?.queryGroups) && profile.queryGroups.length ? profile.queryGroups : null;
+  const groups = rawGroups
+    ? rawGroups.map((group, index) => ({
+        id: String(group?.id || `group-${index + 1}`),
+        name: String(group?.name || '').trim() || 'Основные запросы',
+        queries: Array.isArray(group?.queries) ? group.queries.map((query) => String(query).trim()).filter(Boolean) : []
+      }))
+    : [{ id: 'main', name: 'Основные запросы', queries: Array.isArray(profile?.queries) ? profile.queries.map((query) => String(query).trim()).filter(Boolean) : [] }];
+  return groups;
+}
+function flattenQueryGroups(groups) { return normalizeProfileQueryGroups({ queryGroups: groups }).flatMap((group) => group.queries); }
+function applyStandardProfileOverrides(items, overrides = {}) {
+  return (Array.isArray(items) ? items : []).map((profile) => {
+    const override = overrides?.[String(profile.id)] || {};
+    const hasOverride = Object.prototype.hasOwnProperty.call(overrides || {}, String(profile.id));
+    return { ...profile, originalStandardName: profile.name, originalStandardProfileGroup: profile.profileGroup || '', hasLocalMetadataOverride: hasOverride, name: String(override.name || profile.name), profileGroup: String(override.profileGroup ?? profile.profileGroup ?? '') };
+  });
+}
+function profileFunctionalValues(profile) {
+  const values = profileValues(profile);
+  return { interfaceLang: values.interfaceLang, resultLangs: values.resultLangs, region: values.region, queryGroups: values.queryGroups };
+}
+function sameFunctionalProfileValues(a, b) { return JSON.stringify(profileFunctionalValues(a)) === JSON.stringify(profileFunctionalValues(b)); }
+async function loadBundledStandardProfiles() {
+  if (!bundledStandardProfilesPromise) {
+    bundledStandardProfilesPromise = (async () => {
+      try {
+        const response = await fetch(chrome.runtime.getURL('config/standard-profiles.json'));
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const config = await response.json();
+        const entries = Array.isArray(config) ? config : config?.profiles;
+        return Array.isArray(entries) ? entries.filter((profile) => profile && typeof profile === 'object' && String(profile.id || '').trim() && String(profile.name || '').trim()) : [];
+      } catch (error) {
+        console.warn('Не удалось прочитать встроенный каталог стандартных профилей:', error);
+        return [];
+      }
+    })();
+  }
+  return bundledStandardProfilesPromise;
+}
+function mergeStandardProfiles(remoteProfiles, bundledProfiles, hiddenBundledIds = []) {
+  const hidden = new Set((Array.isArray(hiddenBundledIds) ? hiddenBundledIds : []).map(String));
+  const bundledById = new Map((Array.isArray(bundledProfiles) ? bundledProfiles : [])
+    .filter((profile) => profile && String(profile.id || '').trim())
+    .map((profile) => [String(profile.id), profile]));
+  const merged = new Map();
+  for (const remote of Array.isArray(remoteProfiles) ? remoteProfiles : []) {
+    const id = String(remote?.id || '').trim();
+    if (!id) continue;
+    const bundled = bundledById.get(id);
+    if (!bundled) {
+      const queryGroups = normalizeProfileQueryGroups(remote);
+      merged.set(id, { ...remote, queryGroups, queries: flattenQueryGroups(queryGroups), standardSource: 'github' });
+      continue;
+    }
+    const bundledGroups = normalizeProfileQueryGroups(bundled);
+    const remoteHadGroups = Array.isArray(remote.queryGroups) && remote.queryGroups.length > 0;
+    let groups;
+    if (remoteHadGroups) {
+      // A grouped GitHub profile is authoritative: it must be possible to rename,
+      // move, or remove groups and queries without the packaged catalog restoring them.
+      groups = normalizeProfileQueryGroups(remote).map((group) => ({ ...group, queries: [...group.queries] }));
+    } else {
+      // Backward compatibility for older JSON files that only contain `queries`.
+      groups = bundledGroups.map((group) => ({ ...group, queries: [...group.queries] }));
+      const bundledQuerySet = new Set(bundledGroups.flatMap((group) => group.queries).map((query) => query.trim().toLowerCase()));
+      const remoteLegacyQueries = Array.isArray(remote.queries) ? remote.queries.map(String) : [];
+      const extras = remoteLegacyQueries.filter((query) => !bundledQuerySet.has(query.trim().toLowerCase()));
+      if (extras.length) {
+        let extraGroup = groups.find((group) => group.id === 'github-extra');
+        if (!extraGroup) { extraGroup = { id: 'github-extra', name: 'Дополнительные запросы', queries: [] }; groups.push(extraGroup); }
+        const seen = new Set(extraGroup.queries.map((query) => query.trim().toLowerCase()));
+        for (const query of extras) { const normalized = String(query).trim(); if (normalized && !seen.has(normalized.toLowerCase())) { extraGroup.queries.push(normalized); seen.add(normalized.toLowerCase()); } }
+      }
+    }
+    const queryGroups = groups;
+    merged.set(id, {
+      ...bundled, ...remote,
+      profileGroup: Object.prototype.hasOwnProperty.call(remote, 'profileGroup') ? String(remote.profileGroup || '') : String(bundled.profileGroup || ''),
+      queryGroups, queries: flattenQueryGroups(queryGroups), standardSource: 'github'
+    });
+  }
+  for (const [id, profile] of bundledById) {
+    if (!merged.has(id) && !hidden.has(id)) {
+      const queryGroups = normalizeProfileQueryGroups(profile);
+      merged.set(id, { ...profile, queryGroups, queries: flattenQueryGroups(queryGroups), standardSource: 'bundled' });
+    }
+  }
+  return [...merged.values()];
 }
 function getProfileByKey(key) { return profiles.find((profile) => profileKey(profile) === key) || null; }
 function selectedProfile() { return getProfileByKey(selectedProfileKey); }
@@ -40,17 +146,20 @@ function setStatus(element, text, kind = '') {
 function updateProfileActionButtons() {
   const profile = selectedProfile();
   const hasToken = !!$('github-token')?.value.trim();
-  if ($('save-standard-profile')) $('save-standard-profile').hidden = !(profile?.profileType === 'standard' && hasToken);
+  if ($('save-standard-profile')) $('save-standard-profile').hidden = !(profile?.profileType === 'standard' && profile.standardSource !== 'bundled' && hasToken);
   if ($('publish-profile')) $('publish-profile').hidden = !(profile?.profileType === 'user' && hasToken);
 }
 function normalizeQueries(value) { return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean); }
 function profileValues(profile) {
+  const queryGroups = normalizeProfileQueryGroups(profile);
   return {
     name: String(profile.name || '').trim() || 'Новый профиль',
+    profileGroup: String(profile.profileGroup || '').trim(),
     interfaceLang: String(profile.interfaceLang || '').trim(),
     resultLangs: String(Array.isArray(profile.resultLangs) ? profile.resultLangs.join(', ') : profile.resultLangs || '').trim(),
     region: String(profile.region || '').trim().toUpperCase(),
-    queries: Array.isArray(profile.queries) ? profile.queries.map((q) => String(q).trim()).filter(Boolean) : []
+    queryGroups,
+    queries: queryGroups.flatMap((group) => group.queries)
   };
 }
 function sameProfileValues(a, b) { return JSON.stringify(profileValues(a)) === JSON.stringify(profileValues(b)); }
@@ -58,9 +167,12 @@ function sameProfileValues(a, b) { return JSON.stringify(profileValues(a)) === J
 async function loadProfiles() {
   const stored = await chrome.storage.local.get({
     standardProfiles: [], userProfiles: null, profiles: null,
+    hiddenBundledStandardProfileIds: [], standardProfileOverrides: {},
     selectedProfileKey: null, selectedProfileId: null, monitorProfileKey: null
   });
-  standardProfiles = Array.isArray(stored.standardProfiles) ? stored.standardProfiles : [];
+  const bundled = await loadBundledStandardProfiles();
+  standardProfileOverrides = stored.standardProfileOverrides && typeof stored.standardProfileOverrides === 'object' ? stored.standardProfileOverrides : {};
+  standardProfiles = applyStandardProfileOverrides(mergeStandardProfiles(stored.standardProfiles, bundled, stored.hiddenBundledStandardProfileIds), standardProfileOverrides);
   if (Array.isArray(stored.userProfiles)) {
     userProfiles = stored.userProfiles;
   } else if (Array.isArray(stored.profiles)) {
@@ -83,34 +195,52 @@ async function loadProfiles() {
 }
 async function persistProfiles() {
   rebuildProfiles();
-  await chrome.storage.local.set({ userProfiles, selectedProfileKey, monitorProfileKey });
+  await chrome.storage.local.set({ userProfiles, selectedProfileKey, monitorProfileKey, standardProfileOverrides });
+}
+function renderProfileGroupSuggestions() {
+  const list = $('profile-groups-suggestions');
+  if (!list) return;
+  list.replaceChildren();
+  const names = [...new Set(profiles.map((profile) => String(profile.profileGroup || '').trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'ru', { sensitivity: 'base', numeric: true }));
+  names.forEach((name) => { const option = document.createElement('option'); option.value = name; list.append(option); });
 }
 function renderProfileSelectors() {
   const selected = $('profile-select');
   const monitor = $('monitor-profile');
   const fill = (select, value) => {
     select.replaceChildren();
-    if (standardProfiles.length) {
-      const group = document.createElement('optgroup'); group.label = 'Стандартные · GitHub';
-      standardProfiles.forEach((profile) => group.append(new Option(profile.name || 'Без названия', profileKey(profile))));
-      select.append(group);
+    const grouped = new Map();
+    for (const profile of profiles) {
+      const groupName = String(profile.profileGroup || '').trim() || 'Без группы';
+      if (!grouped.has(groupName)) grouped.set(groupName, []);
+      grouped.get(groupName).push(profile);
     }
-    if (userProfiles.length) {
-      const group = document.createElement('optgroup'); group.label = 'Мои профили · локально';
-      userProfiles.forEach((profile) => {
-        const suffix = profile.sourceStandardId ? ' (копия)' : '';
-        group.append(new Option(`${profile.name || 'Без названия'}${suffix}`, profileKey(profile)));
+    const groupNames = [...grouped.keys()].sort((a, b) => {
+      if (a === 'Без группы') return 1; if (b === 'Без группы') return -1;
+      return a.localeCompare(b, 'ru', { sensitivity: 'base', numeric: true });
+    });
+    for (const groupName of groupNames) {
+      const optgroup = document.createElement('optgroup'); optgroup.label = groupName;
+      grouped.get(groupName).sort(compareProfileNames).forEach((profile) => {
+        const suffix = profile.profileType === 'user' && profile.sourceStandardId ? ' (копия)' : '';
+        optgroup.append(new Option(`${profile.name || 'Без названия'}${suffix}`, profileKey(profile)));
       });
-      select.append(group);
+      select.append(optgroup);
     }
     if (!profiles.length) select.append(new Option('Нет профилей', ''));
     select.value = value || '';
   };
   fill(selected, selectedProfileKey);
   fill(monitor, monitorProfileKey);
+  renderProfileGroupSuggestions();
   const profile = selectedProfile();
   $('delete-profile').disabled = !profile;
-  $('delete-profile').title = profile?.profileType === 'standard' ? 'Удалить стандартный профиль из GitHub' : 'Удалить локальный профиль';
+  $('delete-profile').title = profile?.profileType !== 'standard'
+    ? 'Удалить локальный профиль'
+    : profile.standardSource === 'bundled'
+      ? 'Скрыть встроенный профиль на этом устройстве'
+      : 'Удалить стандартный профиль из GitHub';
   $('delete-profile').setAttribute('aria-label', $('delete-profile').title);
   $('export-profile').disabled = !profile || profile.profileType === 'standard';
   updateProfileActionButtons();
@@ -118,24 +248,54 @@ function renderProfileSelectors() {
 function updateProfileKindText(profile = selectedProfile()) {
   const node = $('profile-kind');
   if (!profile) { node.textContent = 'Нет выбранного профиля.'; return; }
-  if (profile.profileType === 'standard') {
-    node.textContent = 'Стандартный профиль из GitHub. «Сохранить профиль» создаёт локальную копию. Чтобы изменить оригинал, используйте «Сохранить изменения…»; кнопка × удаляет профиль из GitHub. Для обеих операций нужен Fine-grained token.';
+  if (profile.profileType === 'standard' && profile.standardSource === 'bundled') {
+    node.textContent = 'Встроенный стандартный профиль. Его название и группа меняются локально без создания копии. Изменение языков, региона или поисковых групп создаёт вашу отдельную копию; кнопка × скрывает встроенный профиль только на этом устройстве.';
+  } else if (profile.profileType === 'standard') {
+    node.textContent = 'Стандартный профиль из GitHub. Название и группа меняются локально; с Fine-grained token их можно опубликовать вместе с остальными изменениями. Изменение языков, региона или поисковых групп через «Сохранить профиль» создаёт локальную копию.';
   } else if (profile.sourceStandardId) {
     node.textContent = 'Пользовательская копия стандартного профиля. Обновление GitHub не перезапишет ваши изменения.';
   } else {
     node.textContent = 'Пользовательский профиль хранится только в этом браузере.';
   }
 }
+function renderQueryGroupsEditor(queryGroups) {
+  const container = $('query-groups-editor');
+  container.replaceChildren();
+  const groups = Array.isArray(queryGroups) && queryGroups.length ? queryGroups : [{ id: makeId(), name: 'Основные запросы', queries: [] }];
+  groups.forEach((group, index) => {
+    const card = document.createElement('div'); card.className = 'query-group-editor-card'; card.dataset.groupId = String(group.id || makeId());
+    const heading = document.createElement('div'); heading.className = 'query-group-editor-heading';
+    const name = document.createElement('input'); name.type = 'text'; name.className = 'query-group-name-input'; name.maxLength = 80; name.value = String(group.name || 'Основные запросы'); name.placeholder = 'Название группы'; name.setAttribute('aria-label', 'Название группы запросов');
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'query-group-remove'; remove.textContent = '×'; remove.title = 'Удалить группу'; remove.setAttribute('aria-label', 'Удалить группу'); remove.disabled = groups.length <= 1;
+    heading.append(name, remove);
+    const textarea = document.createElement('textarea'); textarea.className = 'query-group-queries'; textarea.rows = 4; textarea.placeholder = 'Каждая строка — отдельный запрос Google'; textarea.value = Array.isArray(group.queries) ? group.queries.join('\n') : '';
+    card.append(heading, textarea); container.append(card);
+  });
+  updateQueryGroupCount();
+}
+function updateQueryGroupCount() {
+  const groups = readQueryGroupsFromEditor();
+  $('query-count').textContent = String(groups.reduce((sum, group) => sum + group.queries.length, 0));
+  const cards = [...$('query-groups-editor').children];
+  cards.forEach((card) => { const button = card.querySelector('.query-group-remove'); if (button) button.disabled = cards.length <= 1; });
+}
+function readQueryGroupsFromEditor() {
+  return [...$('query-groups-editor').querySelectorAll('.query-group-editor-card')].map((card, index) => ({
+    id: card.dataset.groupId || `group-${index + 1}`,
+    name: card.querySelector('.query-group-name-input')?.value.trim() || 'Новая группа',
+    queries: normalizeQueries(card.querySelector('.query-group-queries')?.value || '')
+  })).filter((group) => group.name || group.queries.length);
+}
 function loadProfileIntoForm() {
   const profile = selectedProfile();
   if (!profile) return;
   const values = profileValues(profile);
   $('profile-name').value = values.name;
+  $('profile-group').value = values.profileGroup;
   $('interface-lang').value = values.interfaceLang;
   $('results-langs').value = values.resultLangs;
   $('search-region').value = values.region;
-  $('queries').value = values.queries.join('\n');
-  $('query-count').textContent = String(values.queries.length);
+  renderQueryGroupsEditor(values.queryGroups);
   $('save-status').textContent = '';
   updateProfileKindText(profile);
   renderProfileSelectors();
@@ -143,29 +303,33 @@ function loadProfileIntoForm() {
 function readProfileFromForm() {
   let profile = selectedProfile();
   if (!profile) throw new Error('Сначала создайте или синхронизируйте профиль.');
+  const queryGroups = readQueryGroupsFromEditor();
   const draft = {
     name: $('profile-name').value.trim() || 'Новый профиль',
+    profileGroup: $('profile-group').value.trim(),
     interfaceLang: $('interface-lang').value.trim(),
     resultLangs: $('results-langs').value.trim(),
     region: $('search-region').value.trim().toUpperCase(),
-    queries: normalizeQueries($('queries').value)
+    queryGroups,
+    queries: queryGroups.flatMap((group) => group.queries)
   };
   if (profile.profileType === 'standard') {
-    if (!sameProfileValues(profile, draft)) {
-      const copy = {
-        ...draft,
-        id: makeId(),
-        profileType: 'user',
-        sourceStandardId: profile.id,
-        sourceStandardName: profile.name,
-        copiedAt: new Date().toISOString()
-      };
+    if (sameFunctionalProfileValues(profile, draft)) {
+      const id = String(profile.id);
+      const originalName = String(profile.originalStandardName || profile.name);
+      const originalGroup = String(profile.originalStandardProfileGroup ?? profile.profileGroup ?? '');
+      if (draft.name === originalName && draft.profileGroup === originalGroup) {
+        delete standardProfileOverrides[id];
+      } else {
+        standardProfileOverrides[id] = { name: draft.name, profileGroup: draft.profileGroup };
+      }
+      profile.name = draft.name; profile.profileGroup = draft.profileGroup;
+    } else {
+      const copy = { ...draft, id: makeId(), profileType: 'user', sourceStandardId: profile.id, sourceStandardName: profile.name, copiedAt: new Date().toISOString() };
       userProfiles.push(copy);
-      rebuildProfiles();
       if (monitorProfileKey === profileKey(profile)) monitorProfileKey = profileKey(copy);
       selectedProfileKey = profileKey(copy);
       profile = copy;
-      renderProfileSelectors();
       updateProfileKindText(profile);
     }
   } else {
@@ -174,6 +338,7 @@ function readProfileFromForm() {
   rebuildProfiles();
   return profile;
 }
+
 function addLog(message) {
   const line = document.createElement('div');
   line.textContent = message;
@@ -208,7 +373,7 @@ $('profile-select').addEventListener('change', async (event) => {
 });
 $('new-profile').addEventListener('click', async () => {
   try { readProfileFromForm(); await persistProfiles(); } catch (_) {}
-  const profile = { id: makeId(), name: 'Новый профиль', interfaceLang: '', resultLangs: '', region: '', queries: [], profileType: 'user' };
+  const profile = { id: makeId(), name: 'Новый профиль', profileGroup: '', interfaceLang: '', resultLangs: '', region: '', queryGroups: [{ id: makeId(), name: 'Основные запросы', queries: [] }], queries: [], profileType: 'user' };
   userProfiles.push(profile);
   rebuildProfiles();
   selectedProfileKey = profileKey(profile);
@@ -222,21 +387,39 @@ $('delete-profile').addEventListener('click', async () => {
   const profile = selectedProfile();
   if (!profile) return;
   if (profile.profileType === 'standard') {
-    const confirmed = confirm(`Удалить стандартный профиль «${profile.name}» из GitHub? Это изменение попадёт в репозиторий и будет распространено всем пользователям после синхронизации.`);
-    if (!confirmed) return;
     try {
-      await saveGitHubToken();
-      setStatus($('standard-sync-status'), `Удаляю стандартный профиль «${profile.name}» из GitHub…`);
-      await deleteStandardProfileFromGitHub(profile.id, profile.name);
-      const sync = await requestStandardSync(true, true);
-      if (!sync?.ok) throw new Error(`Профиль удалён в GitHub, но локальная синхронизация не удалась: ${sync?.error || 'неизвестная ошибка'}. Нажмите «Проверить обновление».`);
-      if (!getProfileByKey(selectedProfileKey)) selectedProfileKey = profiles[0] ? profileKey(profiles[0]) : null;
+      const storedCatalog = await chrome.storage.local.get({ standardProfiles: [], hiddenBundledStandardProfileIds: [] });
+      const existsInGitHub = Array.isArray(storedCatalog.standardProfiles)
+        && storedCatalog.standardProfiles.some((item) => String(item?.id || '') === String(profile.id));
+      const question = existsInGitHub
+        ? `Удалить стандартный профиль «${profile.name}» из GitHub? Это изменение попадёт в репозиторий и будет распространено всем пользователям после синхронизации.`
+        : `Скрыть встроенный стандартный профиль «${profile.name}» на этом устройстве? Ваши пользовательские профили не изменятся.`;
+      if (!confirm(question)) return;
+
+      if (existsInGitHub) {
+        await saveGitHubToken();
+        setStatus($('standard-sync-status'), `Удаляю стандартный профиль «${profile.name}» из GitHub…`);
+        await deleteStandardProfileFromGitHub(profile.id, profile.name);
+      }
+
+      const hiddenIds = new Set((storedCatalog.hiddenBundledStandardProfileIds || []).map(String));
+      hiddenIds.add(String(profile.id));
+      await chrome.storage.local.set({ hiddenBundledStandardProfileIds: [...hiddenIds] });
+
+      if (existsInGitHub) {
+        const sync = await requestStandardSync(true, true);
+        if (!sync?.ok) throw new Error(`Профиль удалён в GitHub, но локальная синхронизация не удалась: ${sync?.error || 'неизвестная ошибка'}. Нажмите «Проверить обновление».`);
+      } else {
+        await refreshProfilesFromStorage();
+      }
       if (!getProfileByKey(monitorProfileKey)) monitorProfileKey = selectedProfileKey;
       await persistProfiles();
       renderProfileSelectors();
       if (selectedProfile()) loadProfileIntoForm();
       renderMonitorQueries();
-      setStatus($('standard-sync-status'), `Стандартный профиль «${profile.name}» удалён из GitHub.`, 'success');
+      setStatus($('standard-sync-status'), existsInGitHub
+        ? `Стандартный профиль «${profile.name}» удалён из GitHub.`
+        : `Встроенный профиль «${profile.name}» скрыт на этом устройстве.`, 'success');
     } catch (error) {
       setStatus($('standard-sync-status'), error.message || String(error), 'error');
     }
@@ -250,7 +433,19 @@ $('delete-profile').addEventListener('click', async () => {
   if (selectedProfile()) loadProfileIntoForm();
   renderMonitorQueries();
 });
-$('queries').addEventListener('input', () => { $('query-count').textContent = String(normalizeQueries($('queries').value).length); });
+$('query-groups-editor').addEventListener('input', updateQueryGroupCount);
+$('query-groups-editor').addEventListener('click', (event) => {
+  const button = event.target.closest('.query-group-remove');
+  if (!button || button.disabled) return;
+  button.closest('.query-group-editor-card')?.remove();
+  updateQueryGroupCount();
+});
+$('add-query-group').addEventListener('click', () => {
+  const groups = readQueryGroupsFromEditor();
+  groups.push({ id: makeId(), name: 'Новая группа', queries: [] });
+  renderQueryGroupsEditor(groups);
+  $('query-groups-editor').lastElementChild?.querySelector('.query-group-name-input')?.focus();
+});
 $('save-profile').addEventListener('click', async () => {
   try {
     const profile = readProfileFromForm();
@@ -258,7 +453,7 @@ $('save-profile').addEventListener('click', async () => {
     renderProfileSelectors();
     loadProfileIntoForm();
     renderMonitorQueries();
-    setStatus($('save-status'), `${profile.profileType === 'standard' ? 'Стандартный профиль не изменён' : 'Сохранено локально'}: ${profile.name}`, 'success');
+    setStatus($('save-status'), `${profile.profileType === 'standard' ? 'Локальные название и группа стандартного профиля сохранены' : 'Профиль сохранён локально'}: ${profile.name}`, 'success');
   } catch (error) { setStatus($('save-status'), error.message, 'error'); }
 });
 
@@ -273,7 +468,7 @@ $('export-profile').addEventListener('click', async () => {
     const profile = readProfileFromForm();
     await persistProfiles();
     if (profile.profileType === 'standard') throw new Error('Экспорт доступен для пользовательских профилей. Измените стандартный профиль, чтобы создать копию.');
-    const exported = { format: 'google-region-monitor-profile', version: 1, exportedAt: new Date().toISOString(), profile: profileValues(profile) };
+    const exported = { format: 'google-region-monitor-profile', version: 2, exportedAt: new Date().toISOString(), profile: profileValues(profile) };
     downloadBlob(new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json;charset=utf-8' }), `${profile.name.replace(/[^\p{L}\p{N}-]+/gu, '-').replace(/^-|-$/g, '') || 'profile'}.json`);
     setStatus($('save-status'), `Экспортирован профиль «${profile.name}».`, 'success');
   } catch (error) { setStatus($('save-status'), error.message || String(error), 'error'); }
@@ -704,22 +899,31 @@ function renderMonitorQueries(profileKeyOverride = $('monitor-profile').value ||
   const container = $('monitor-query-list');
   container.replaceChildren();
   container.dataset.profileKey = key;
-  const queries = profile?.queries || [];
-  if (!queries.length) {
+  const groups = normalizeProfileQueryGroups(profile);
+  const entries = []; let queryIndex = 0;
+  groups.forEach((group) => {
+    const groupEntries = group.queries.map((query) => ({ query, index: queryIndex++ }));
+    if (groupEntries.length) entries.push({ title: group.name, entries: groupEntries });
+  });
+  if (!entries.length) {
     container.textContent = 'В выбранном профиле пока нет запросов.';
     container.classList.add('empty-state');
     return;
   }
   container.classList.remove('empty-state');
-  queries.forEach((query, index) => {
-    const label = document.createElement('label'); label.className = 'query-check';
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = true;
-    checkbox.dataset.profileKey = key;
-    checkbox.dataset.queryIndex = String(index);
-    const text = document.createElement('span'); text.textContent = query;
-    label.append(checkbox, text); container.append(label);
+  entries.forEach((group) => {
+    const heading = document.createElement('h4');
+    heading.className = 'query-group-heading';
+    heading.textContent = `${group.title} · ${group.entries.length}`;
+    container.append(heading);
+    group.entries.forEach(({ query, index }) => {
+      const label = document.createElement('label'); label.className = 'query-check';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox'; checkbox.checked = true;
+      checkbox.dataset.profileKey = key; checkbox.dataset.queryIndex = String(index);
+      const text = document.createElement('span'); text.textContent = query;
+      label.append(checkbox, text); container.append(label);
+    });
   });
 }
 $('select-all-queries').addEventListener('click', () => $('monitor-query-list').querySelectorAll('input[type="checkbox"]').forEach((box) => { box.checked = true; }));
@@ -1213,7 +1417,7 @@ $('run-report').addEventListener('click', async () => {
 
   // Capture immutable profile and query selection before any async operation.
   const normalizedProfile = profileValues(currentProfile);
-  const profile = { ...currentProfile, ...normalizedProfile, queries: [...normalizedProfile.queries] };
+  const profile = { ...currentProfile, ...normalizedProfile, queryGroups: normalizedProfile.queryGroups.map((group) => ({ ...group, queries: [...group.queries] })), queries: [...normalizedProfile.queries] };
   const selectedBoxes = [...queryContainer.querySelectorAll('input[type="checkbox"]:checked')];
   if (selectedBoxes.some((box) => box.dataset.profileKey !== selectedKey)) {
     renderMonitorQueries(selectedKey);
@@ -1432,6 +1636,13 @@ $('run-report').addEventListener('click', async () => {
 
 // GitHub Release checker and standard-profile publisher/synchronizer.
 const EXTENSION_VERSION = chrome.runtime.getManifest().version;
+const INSTALLED_VERSION_NOTES = [
+  'Добавлены пользовательские группы страновых профилей: назначайте профилям одинаковое название группы, например «Южная Азия» или «Латинская Америка».',
+  'Внутри каждого профиля можно создавать, удалять и переименовывать группы поисковых запросов; названия не зашиты в код расширения.',
+  'Названия стандартных профилей можно менять локально без создания копии; при наличии GitHub token изменение можно опубликовать в общий каталог.',
+  'Старые профили с плоским массивом queries автоматически открываются как одна группа «Основные запросы» без потери поисковых строк.',
+  'Формат JSON расширен полями profileGroup и queryGroups; grouped GitHub profiles являются источником истины, поэтому синхронизация не возвращает удалённые пользователем группы и запросы.'
+];
 let latestUpdateUrl = '';
 let latestUpdateVersion = '';
 
@@ -1447,6 +1658,37 @@ function isVersionNewer(candidate, current) {
     if ((a[i] || 0) < (b[i] || 0)) return false;
   }
   return false;
+}
+function renderInstalledReleaseNotes() {
+  const versionNode = $('installed-release-version');
+  const notesNode = $('installed-release-notes');
+  if (versionNode) versionNode.textContent = `v${EXTENSION_VERSION}`;
+  if (notesNode) {
+    notesNode.replaceChildren();
+    const list = document.createElement('ul');
+    INSTALLED_VERSION_NOTES.forEach((note) => {
+      const item = document.createElement('li');
+      item.textContent = note;
+      list.append(item);
+    });
+    notesNode.append(list);
+  }
+}
+function renderAvailableReleaseNotes(release) {
+  const versionNode = $('available-release-version');
+  const notesNode = $('available-release-notes');
+  const linkNode = $('available-release-link');
+  if (versionNode) versionNode.textContent = release?.version ? `v${release.version}` : 'не проверено';
+  if (notesNode) notesNode.textContent = String(release?.body || '').trim() || 'В описании GitHub Release пока нет списка изменений.';
+  if (linkNode) {
+    if (release?.url) {
+      linkNode.href = release.url;
+      linkNode.hidden = false;
+    } else {
+      linkNode.removeAttribute('href');
+      linkNode.hidden = true;
+    }
+  }
 }
 function getGitHubSettingsFromConfig(token = '') {
   const cfg = globalThis.GITHUB_CONFIG || {};
@@ -1473,8 +1715,10 @@ function validGitHubSettings({ repo, branch, path }) {
 }
 
 async function refreshProfilesFromStorage() {
-  const stored = await chrome.storage.local.get({ standardProfiles: [] });
-  standardProfiles = Array.isArray(stored.standardProfiles) ? stored.standardProfiles.map((p) => ({ ...p, profileType: 'standard' })) : [];
+  const stored = await chrome.storage.local.get({ standardProfiles: [], hiddenBundledStandardProfileIds: [], standardProfileOverrides: {} });
+  const bundled = await loadBundledStandardProfiles();
+  standardProfileOverrides = stored.standardProfileOverrides && typeof stored.standardProfileOverrides === 'object' ? stored.standardProfileOverrides : {};
+  standardProfiles = applyStandardProfileOverrides(mergeStandardProfiles(stored.standardProfiles, bundled, stored.hiddenBundledStandardProfileIds), standardProfileOverrides);
   rebuildProfiles();
   if (!getProfileByKey(selectedProfileKey)) selectedProfileKey = profiles[0] ? profileKey(profiles[0]) : null;
   if (!getProfileByKey(monitorProfileKey)) monitorProfileKey = selectedProfileKey;
@@ -1520,10 +1764,12 @@ async function checkGitHubUpdates(silent = false) {
   latestUpdateUrl = '';
   latestUpdateVersion = '';
   if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(settings.repo)) {
+    renderAvailableReleaseNotes({ version: '', body: 'Проверьте owner и repository в файле github-config.js: без этих параметров описание GitHub Release недоступно.' });
     if (!silent) setStatus(status, 'Проверьте owner и repository в файле github-config.js.', 'error');
     return;
   }
   if (!silent) setStatus(status, 'Проверяю последнюю версию на GitHub…');
+  let releaseLoaded = false;
   try {
     const response = await fetch(`https://api.github.com/repos/${settings.repo}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
@@ -1534,20 +1780,28 @@ async function checkGitHubUpdates(silent = false) {
       throw new Error(`GitHub API: HTTP ${response.status}.`);
     }
     const release = await response.json();
+    releaseLoaded = true;
     const releaseVersion = String(release.tag_name || release.name || '').replace(/^v/i, '');
+    renderAvailableReleaseNotes({ version: releaseVersion, body: release.body, url: release.html_url });
     const asset = (release.assets || []).find((item) => item.name === 'google-region-monitor.zip')
       || (release.assets || []).find((item) => /google.*region.*monitor.*\.zip$/i.test(item.name));
-    if (!asset?.browser_download_url) throw new Error('В релизе нет файла google-region-monitor.zip.');
-    if (isVersionNewer(releaseVersion, EXTENSION_VERSION)) {
+    const isNewer = isVersionNewer(releaseVersion, EXTENSION_VERSION);
+    if (isNewer) {
+      if ($('available-release-heading')) $('available-release-heading').textContent = 'Что нового в доступной версии';
+      if (!asset?.browser_download_url) throw new Error(`Доступен релиз v${releaseVersion}, но в нём нет файла google-region-monitor.zip.`);
       latestUpdateUrl = asset.browser_download_url;
       latestUpdateVersion = releaseVersion;
       $('download-update').textContent = `Скачать v${releaseVersion}`;
       $('download-update').hidden = false;
       setStatus(status, `Доступна версия ${releaseVersion} (установлена ${EXTENSION_VERSION}). После скачивания распакуйте архив и перезагрузите расширение.`, 'success');
+      if ($('available-release-heading')) $('available-release-heading').textContent = 'Что нового в доступной версии';
     } else {
-      setStatus(status, `Установлена последняя версия: ${EXTENSION_VERSION}.`);
+      $('download-update').hidden = true;
+      setStatus(status, `Установлена актуальная версия ${EXTENSION_VERSION}. Последний GitHub Release: ${releaseVersion || 'без номера'}.`, 'success');
+      if ($('available-release-heading')) $('available-release-heading').textContent = 'Что нового в последнем GitHub Release';
     }
   } catch (error) {
+    if (!releaseLoaded) renderAvailableReleaseNotes({ version: '', body: `Не удалось получить описание последнего GitHub Release: ${error.message || String(error)}` });
     if (!silent || settings.repo) setStatus(status, error.message || String(error), 'error');
   }
 }
@@ -1572,11 +1826,13 @@ function slugify(value, fallback = `profile-${Date.now()}`) {
 function profileToConfigEntry(profile, id) {
   return {
     id,
-    name: profile.name,
+    name: profile.hasLocalMetadataOverride ? profile.originalStandardName : profile.name,
     interfaceLang: profile.interfaceLang || '',
     resultLangs: profile.resultLangs || '',
     region: profile.region || '',
-    queries: [...(profile.queries || [])]
+    profileGroup: profile.hasLocalMetadataOverride ? profile.originalStandardProfileGroup : (profile.profileGroup || ''),
+    queryGroups: normalizeProfileQueryGroups(profile).map((group) => ({ id: group.id, name: group.name, queries: [...group.queries] })),
+    queries: flattenQueryGroups(profile.queryGroups)
   };
 }
 function getStandardIdForUserProfile(profile, existingEntries = standardProfiles) {
@@ -1722,10 +1978,12 @@ $('save-standard-profile').addEventListener('click', async () => {
   const draft = {
     id: current.id,
     name: $('profile-name').value.trim(),
+    profileGroup: $('profile-group').value.trim(),
     interfaceLang: $('interface-lang').value.trim(),
     resultLangs: $('results-langs').value.trim(),
     region: $('search-region').value.trim().toUpperCase(),
-    queries: normalizeQueries($('queries').value)
+    queryGroups: readQueryGroupsFromEditor(),
+    queries: readQueryGroupsFromEditor().flatMap((group) => group.queries)
   };
   if (!draft.name) {
     setStatus($('standard-sync-status'), 'Укажите название стандартного профиля.', 'error');
@@ -1735,6 +1993,8 @@ $('save-standard-profile').addEventListener('click', async () => {
     await saveGitHubToken();
     setStatus($('standard-sync-status'), `Отправляю изменения профиля «${draft.name}» в GitHub…`);
     await updateStandardProfileOnGitHub(draft);
+    delete standardProfileOverrides[String(draft.id)];
+    await chrome.storage.local.set({ standardProfileOverrides });
     const sync = await requestStandardSync(true, true);
     if (!sync?.ok) {
       setStatus($('standard-sync-status'), `Изменения профиля «${draft.name}» уже сохранены в GitHub, но список на устройстве не обновился: ${sync?.error || 'ошибка синхронизации'}. Нажмите «Проверить обновление».`, 'error');
@@ -1784,22 +2044,28 @@ async function initializeGitHubFeatures() {
 }
 
 $('app-version').textContent = `v${EXTENSION_VERSION}`;
+renderInstalledReleaseNotes();
 loadRegionChatGPTFilterSetting().catch((error) => setStatus($('run-status'), `Не удалось загрузить настройку ChatGPT: ${error.message || String(error)}`, 'error'));
 loadGoogleSearchMinIntervalSetting().catch((error) => setStatus($('run-status'), `Не удалось загрузить интервал Google: ${error.message || String(error)}`, 'error'));
 loadProfiles().then(initializeGitHubFeatures).catch((error) => setStatus($('save-status'), error.message || String(error), 'error'));
 
 // Reflect a daily background sync in an already-open side panel without touching local profiles.
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== 'local' || !changes.standardProfiles) return;
-  standardProfiles = Array.isArray(changes.standardProfiles.newValue)
-    ? changes.standardProfiles.newValue.map((profile) => ({ ...profile, profileType: 'standard' }))
-    : [];
-  rebuildProfiles();
-  if (!getProfileByKey(selectedProfileKey)) selectedProfileKey = profiles[0] ? profileKey(profiles[0]) : null;
-  if (!getProfileByKey(monitorProfileKey)) monitorProfileKey = selectedProfileKey;
-  renderProfileSelectors();
-  renderMonitorQueries();
-  const active = document.activeElement;
-  const editing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
-  if (!editing && selectedProfile()) loadProfileIntoForm();
+  if (areaName !== 'local' || (!changes.standardProfiles && !changes.hiddenBundledStandardProfileIds && !changes.standardProfileOverrides)) return;
+  (async () => {
+    // Re-merge the remote cache with the packaged catalog after background sync.
+    // This keeps bundled-only profiles visible and respects locally hidden IDs.
+    const stored = await chrome.storage.local.get({ standardProfiles: [], hiddenBundledStandardProfileIds: [], standardProfileOverrides: {} });
+    const bundled = await loadBundledStandardProfiles();
+    standardProfileOverrides = stored.standardProfileOverrides && typeof stored.standardProfileOverrides === 'object' ? stored.standardProfileOverrides : {};
+    standardProfiles = applyStandardProfileOverrides(mergeStandardProfiles(stored.standardProfiles, bundled, stored.hiddenBundledStandardProfileIds), standardProfileOverrides);
+    rebuildProfiles();
+    if (!getProfileByKey(selectedProfileKey)) selectedProfileKey = profiles[0] ? profileKey(profiles[0]) : null;
+    if (!getProfileByKey(monitorProfileKey)) monitorProfileKey = selectedProfileKey;
+    renderProfileSelectors();
+    renderMonitorQueries();
+    const active = document.activeElement;
+    const editing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+    if (!editing && selectedProfile()) loadProfileIntoForm();
+  })().catch((error) => console.warn('Не удалось обновить список стандартных профилей:', error));
 });

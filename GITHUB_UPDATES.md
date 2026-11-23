@@ -1,4 +1,27 @@
+# GitHub update instructions — v1.8.0
+
+## 1.8.0
+
+- Added arbitrary `profileGroup` values to combine country profiles into user-named sets such as South Asia or Latin America. Both profile selectors group and alphabetize entries in the extension UI.
+- Added editable `queryGroups` per profile. Group names and membership are profile data, not hard-coded categories.
+- Removed company-specific query classification from the Monitoring UI.
+- Standard profile display names and `profileGroup` can be overridden locally without creating a copy; optional GitHub publishing makes the metadata shared.
+- Legacy flat `queries` arrays migrate into a neutral “Основные запросы” group. Explicit grouped GitHub profiles are authoritative during sync, so intentional group/query removals persist.
+- Updated README, standard profile documentation and JSON schema.
+
+## 1.7.0 (historical)
+
+- Added a release notes panel and UI-level profile sorting.
+- The previous version had a special company-specific query classification; it is replaced in 1.8.0 by user-managed named query groups.
+
 # GitHub: профили и релизы расширения
+
+## Версия 1.6.0 — страновые профили и оптимизация Google Search
+
+- Каталог увеличен до 19 стран по двум методичкам; прежние профили Вьетнам, Индонезия и Китай сохранены, добавлено 16 новых.
+- Близкие поисковые формулировки объединены через `OR`; отдельными остались самостоятельные тематические блоки и соцсети.
+- Встроенный каталог из ZIP дополняет GitHub-каталог; при совпадающем ID поля GitHub имеют приоритет, а поисковые строки объединяются для миграции старых профилей без потери уникальных дополнительных запросов.
+- Выпадающие списки стандартных и пользовательских профилей сортируются по алфавиту.
 
 ## 1. Подготовка репозитория
 

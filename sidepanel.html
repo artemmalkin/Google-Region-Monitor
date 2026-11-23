@@ -45,6 +45,12 @@
       <div class="card">
         <label class="field-label" for="profile-name">Название профиля</label>
         <input id="profile-name" type="text" placeholder="Например, Вьетнам">
+        <p class="field-help">Название можно менять и у стандартных профилей. Для стандартных профилей переименование сохраняется локально; публикация общего названия выполняется через GitHub.</p>
+
+        <label class="field-label" for="profile-group">Группа профилей</label>
+        <input id="profile-group" type="text" maxlength="80" list="profile-groups-suggestions" placeholder="Например, Южная Азия">
+        <datalist id="profile-groups-suggestions"></datalist>
+        <p class="field-help">Укажите одинаковое название у профилей, которые хотите объединить. Группы создаются и сортируются автоматически.</p>
 
         <div class="field-row">
           <div>
@@ -84,21 +90,22 @@
       <div class="card">
         <div class="section-heading compact-heading">
           <div>
-            <h3>Поисковые запросы</h3>
-            <p>Каждая строка — отдельный запрос Google.</p>
+            <h3>Группы поисковых запросов</h3>
+            <p>Названия и состав групп задаются вами. Каждая строка — отдельный запрос Google.</p>
           </div>
           <span id="query-count" class="count-pill">0</span>
         </div>
-        <textarea id="queries" rows="7" placeholder='rosatom&#10;"rosatom" AND "rooppur"'></textarea>
-        <p class="field-help">Можно использовать операторы Google: AND, OR, кавычки, минус-слова и т. д.</p>
+        <div id="query-groups-editor" class="query-groups-editor"></div>
+        <button id="add-query-group" class="button button-secondary button-compact" type="button">+ Добавить группу запросов</button>
+        <p class="field-help">Например: «Общие темы», «Проекты компании», «Социальные сети», «Литий». Это только примеры: группы не зашиты в расширение и могут называться как угодно.</p>
       </div>
 
       <div class="card update-card">
         <h3>Стандартные профили из GitHub</h3>
-        <p class="field-help">Стандартные профили автоматически синхронизируются раз в день. Ручная синхронизация выполняется кнопкой «Проверить обновление». Настройки репозитория задаются в github-config.js.</p>
+        <p class="field-help">Стандартные профили автоматически синхронизируются раз в день. Ручная синхронизация выполняется кнопкой «Проверить обновление». Названия и группы профилей можно менять локально, а при наличии токена — публиковать в GitHub.</p>
         <label class="field-label" for="github-token">GitHub Fine-grained token (для изменения стандартных профилей)</label>
         <input id="github-token" type="password" autocomplete="off" placeholder="github_pat_…">
-        <p class="field-help">Нужен для добавления, редактирования и удаления стандартных профилей. Разрешение: Contents → Read and write только для этого репозитория. Токен хранится локально в Chrome.</p>
+        <p class="field-help">Нужен для добавления, редактирования и удаления стандартных профилей в общем каталоге GitHub. Разрешение: Contents → Read and write только для этого репозитория. Токен хранится локально в Chrome.</p>
         <div class="button-row">
           <button id="publish-profile" class="button button-secondary button-compact" type="button" hidden>Добавить мой профиль в GitHub</button>
           <button id="save-standard-profile" class="button button-primary button-compact" type="button" hidden>Сохранить изменения стандартного профиля в GitHub</button>
@@ -106,13 +113,19 @@
         <div id="standard-sync-status" class="inline-status" role="status"></div>
       </div>
 
-      <div class="card update-card">
-        <h3>Обновление самого расширения</h3>
-        <p class="field-help">Проверка последнего GitHub Release и загрузка ZIP. Для распакованной версии Chrome потребуется ручная перезагрузка после скачивания.</p>
+      <div class="card update-card release-notes-card">
+        <h3>Что нового в установленной версии <span id="installed-release-version" class="version-chip">—</span></h3>
+        <div id="installed-release-notes" class="release-notes" aria-live="polite"></div>
+        <div class="release-notes-divider"></div>
+        <h3 id="available-release-heading">Что нового в последнем GitHub Release</h3>
+        <div class="release-version-line">Версия: <b id="available-release-version">проверка…</b></div>
+        <div id="available-release-notes" class="release-notes remote-release-notes">Проверяю описание последнего релиза GitHub…</div>
+        <a id="available-release-link" class="release-link" target="_blank" rel="noopener noreferrer" hidden>Открыть GitHub Release</a>
         <div class="button-row">
           <button id="check-updates" class="button button-secondary button-compact" type="button">Проверить обновление</button>
           <button id="download-update" class="button button-primary button-compact" type="button" hidden>Скачать обновление</button>
         </div>
+        <p class="field-help">После скачивания распакуйте ZIP и перезагрузите расширение на chrome://extensions. Само распакованное расширение Chrome автоматически не заменяет.</p>
         <div id="update-status" class="inline-status" role="status"></div>
       </div>
 
@@ -206,7 +219,7 @@
 
   <footer>
     <span>Данные профилей хранятся локально в Chrome.</span>
-    <span id="app-version">v1.4.7</span>
+    <span id="app-version">v1.8.0</span>
   </footer>
 
   <script src="github-config.js"></script>

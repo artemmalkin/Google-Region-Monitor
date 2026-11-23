@@ -118,3 +118,28 @@ footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 
 .restore-after-monitor input { width: auto; min-width: 14px; margin: 1px 0 0; accent-color: var(--blue); }
 .restore-after-monitor span { flex: 1; }
 #restore-russian-profile, #restore-russian-profile-monitor { white-space: normal; }
+
+/* Version history / changelog */
+.release-notes-card { display: grid; gap: 9px; }
+.version-chip { display: inline-block; margin-left: 5px; padding: 2px 6px; border-radius: 6px; background: #e8f0fe; color: #174ea6; font-size: 10px; font-weight: 700; vertical-align: 1px; }
+.release-notes { color: #3c4043; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.release-notes ul { margin: 0; padding-left: 17px; }
+.release-notes li { margin: 0 0 5px; }
+.remote-release-notes { max-height: 180px; overflow: auto; padding: 9px; border: 1px solid var(--line); border-radius: 8px; background: #fafbfc; white-space: pre-wrap; }
+.release-notes-divider { height: 1px; margin: 2px 0; background: var(--line); }
+.release-version-line { color: var(--muted); font-size: 11px; }
+.release-link { width: fit-content; color: var(--blue); font-size: 11px; text-decoration: none; }
+.release-link:hover { text-decoration: underline; }
+.query-group-heading { margin: 12px 0 5px; padding-bottom: 5px; border-bottom: 1px solid var(--line); color: #3c4043; font-size: 11px; font-weight: 750; }
+.query-group-heading:first-child { margin-top: 0; }
+.query-check span { overflow-wrap: anywhere; }
+
+
+/* User-managed profile and query groups */
+.query-groups-editor { display: grid; gap: 9px; margin: 8px 0 10px; }
+.query-group-editor-card { padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: #fbfcfe; }
+.query-group-editor-heading { display: grid; grid-template-columns: 1fr 32px; gap: 7px; align-items: center; margin-bottom: 7px; }
+.query-group-editor-heading input { min-width: 0; font-weight: 650; }
+.query-group-remove { width: 32px; height: 34px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--red); font-size: 18px; }
+.query-group-editor-card textarea { min-height: 76px; font: 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.query-group-remove:disabled { opacity: .35; cursor: not-allowed; }
