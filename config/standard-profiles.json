@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T15:48:00.000Z",
+  "updatedAt": "2026-11-23T16:24:25.592Z",
   "profiles": [
     {
       "id": "argentina",
@@ -132,13 +132,8 @@
       "interfaceLang": "vi",
       "resultLangs": "vi",
       "region": "VN",
-      "queries": [
-        "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
-        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")",
-        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Vietnam -site:.ru",
-        "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -152,12 +147,15 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Vietnam -site:.ru",
             "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
           ]
         }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
+        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")",
+        "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+      ]
     },
     {
       "id": "india",
@@ -198,14 +196,8 @@
       "interfaceLang": "id",
       "resultLangs": "id",
       "region": "ID",
-      "queries": [
-        "(\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
-        "(\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
-        "(\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")",
-        "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
-        "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -220,12 +212,16 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
             "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
           ]
         }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "(\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
+        "(\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
+        "(\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")",
+        "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+      ]
     },
     {
       "id": "kitai",
@@ -233,13 +229,8 @@
       "interfaceLang": "zh-CN",
       "resultLangs": "zh-CN",
       "region": "HK",
-      "queries": [
-        "(核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
-        "(\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")",
-        "(Rosatom OR Росатом OR 中国) China -site:.ru",
-        "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -253,12 +244,15 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(Rosatom OR Росатом OR 中国) China -site:.ru",
             "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
           ]
         }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "(核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
+        "(\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")",
+        "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
+      ]
     },
     {
       "id": "cuba",
