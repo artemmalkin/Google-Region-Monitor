@@ -103,23 +103,43 @@ function mergeStandardProfiles(remoteProfiles, bundledProfiles, hiddenBundledIds
     }
     const bundledGroups = normalizeProfileQueryGroups(bundled);
     const remoteHadGroups = Array.isArray(remote.queryGroups) && remote.queryGroups.length > 0;
+    const bundledRevision = Number(bundled.queryGroupsRevision) || 0;
+    const remoteRevision = Number(remote.queryGroupsRevision) || 0;
     let groups;
-    if (remoteHadGroups) {
-      // A grouped GitHub profile is authoritative: it must be possible to rename,
-      // move, or remove groups and queries without the packaged catalog restoring them.
+    if (remoteHadGroups && remoteRevision >= bundledRevision) {
+      // A versioned grouped GitHub profile is authoritative. Intentional user
+      // renames, moves and removals remain intact after the one-time migration.
       groups = normalizeProfileQueryGroups(remote).map((group) => ({ ...group, queries: [...group.queries] }));
     } else {
-      // Backward compatibility for older JSON files that only contain `queries`.
+      // Migrate older grouped/flat GitHub profiles to the newly bundled groups.
+      // Keep GitHub-only custom groups and search strings, without duplicating
+      // baseline searches that are merely moving between groups.
       groups = bundledGroups.map((group) => ({ ...group, queries: [...group.queries] }));
       const bundledQuerySet = new Set(bundledGroups.flatMap((group) => group.queries).map((query) => query.trim().toLowerCase()));
-      const remoteLegacyQueries = Array.isArray(remote.queries) ? remote.queries.map(String) : [];
-      const extras = remoteLegacyQueries.filter((query) => !bundledQuerySet.has(query.trim().toLowerCase()));
-      if (extras.length) {
-        let extraGroup = groups.find((group) => group.id === 'github-extra');
-        if (!extraGroup) { extraGroup = { id: 'github-extra', name: 'Дополнительные запросы', queries: [] }; groups.push(extraGroup); }
-        const seen = new Set(extraGroup.queries.map((query) => query.trim().toLowerCase()));
-        for (const query of extras) { const normalized = String(query).trim(); if (normalized && !seen.has(normalized.toLowerCase())) { extraGroup.queries.push(normalized); seen.add(normalized.toLowerCase()); } }
+      const remoteGroups = remoteHadGroups
+        ? normalizeProfileQueryGroups(remote)
+        : [{ id: 'legacy-flat', name: 'Дополнительные запросы', queries: Array.isArray(remote.queries) ? remote.queries.map(String) : [] }];
+      const extras = [];
+      for (const remoteGroup of remoteGroups) {
+        const matching = groups.find((group) => group.id === remoteGroup.id);
+        if (matching && remoteGroup.name) matching.name = remoteGroup.name;
+        if (!matching) {
+          const preserved = { id: remoteGroup.id || `github-${groups.length + 1}`, name: remoteGroup.name || 'Дополнительные запросы', queries: [] };
+          for (const query of remoteGroup.queries) {
+            const normalized = String(query).trim();
+            const key = normalized.toLowerCase();
+            if (normalized && !bundledQuerySet.has(key) && !preserved.queries.some((item) => item.toLowerCase() === key)) preserved.queries.push(normalized);
+          }
+          groups.push(preserved);
+        } else {
+          for (const query of remoteGroup.queries) {
+            const normalized = String(query).trim();
+            const key = normalized.toLowerCase();
+            if (normalized && !bundledQuerySet.has(key) && !extras.some((item) => item.toLowerCase() === key)) extras.push(normalized);
+          }
+        }
       }
+      if (extras.length) groups.push({ id: 'github-extra', name: 'Дополнительные запросы', queries: extras });
     }
     const queryGroups = groups;
     merged.set(id, {
@@ -1636,13 +1656,6 @@ $('run-report').addEventListener('click', async () => {
 
 // GitHub Release checker and standard-profile publisher/synchronizer.
 const EXTENSION_VERSION = chrome.runtime.getManifest().version;
-const INSTALLED_VERSION_NOTES = [
-  'Добавлены пользовательские группы страновых профилей: назначайте профилям одинаковое название группы, например «Южная Азия» или «Латинская Америка».',
-  'Внутри каждого профиля можно создавать, удалять и переименовывать группы поисковых запросов; названия не зашиты в код расширения.',
-  'Названия стандартных профилей можно менять локально без создания копии; при наличии GitHub token изменение можно опубликовать в общий каталог.',
-  'Старые профили с плоским массивом queries автоматически открываются как одна группа «Основные запросы» без потери поисковых строк.',
-  'Формат JSON расширен полями profileGroup и queryGroups; grouped GitHub profiles являются источником истины, поэтому синхронизация не возвращает удалённые пользователем группы и запросы.'
-];
 let latestUpdateUrl = '';
 let latestUpdateVersion = '';
 
@@ -1659,27 +1672,104 @@ function isVersionNewer(candidate, current) {
   }
   return false;
 }
-function renderInstalledReleaseNotes() {
+function extractReleaseNotesSection(markdown, version) {
+  const wanted = String(version || '').replace(/^v/i, '').trim();
+  if (!wanted) return '';
+  const lines = String(markdown || '').replace(/\r\n?/g, '\n').split('\n');
+  const headingPattern = /^##\s+v?(\d+(?:\.\d+){1,3})(?=\s|$|[—–:-])/i;
+  const start = lines.findIndex((line) => {
+    const match = line.match(headingPattern);
+    return match && match[1] === wanted;
+  });
+  if (start < 0) return '';
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^##\s+/.test(lines[i])) { end = i; break; }
+  }
+  return lines.slice(start, end).join('\n').trim();
+}
+
+// The installed changelog is read from the extension package itself and is
+// matched by exact version. No fallback to a previous/later version is allowed.
+async function renderInstalledReleaseNotes() {
   const versionNode = $('installed-release-version');
   const notesNode = $('installed-release-notes');
+  const footerVersionNode = $('app-version');
   if (versionNode) versionNode.textContent = `v${EXTENSION_VERSION}`;
-  if (notesNode) {
-    notesNode.replaceChildren();
-    const list = document.createElement('ul');
-    INSTALLED_VERSION_NOTES.forEach((note) => {
-      const item = document.createElement('li');
-      item.textContent = note;
-      list.append(item);
-    });
-    notesNode.append(list);
+  if (footerVersionNode) footerVersionNode.textContent = `v${EXTENSION_VERSION}`;
+  if (!notesNode) return;
+
+  notesNode.replaceChildren();
+  notesNode.classList.remove('release-notes-warning');
+  notesNode.setAttribute('aria-busy', 'true');
+  try {
+    const response = await fetch(chrome.runtime.getURL('GITHUB_UPDATES.md'));
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const section = extractReleaseNotesSection(await response.text(), EXTENSION_VERSION);
+    if (!section) {
+      const message = document.createElement('p');
+      message.textContent = `Для установленной версии v${EXTENSION_VERSION} в GITHUB_UPDATES.md нет отдельной записи об изменениях. Описания других версий намеренно не показываются под этим номером.`;
+      notesNode.append(message);
+      return;
+    }
+    const lines = section.split(/\r?\n/).slice(1);
+    const listItems = lines.map((line) => line.trim()).filter((line) => /^[-*]\s+/.test(line));
+    if (listItems.length) {
+      const list = document.createElement('ul');
+      listItems.forEach((line) => {
+        const item = document.createElement('li');
+        item.textContent = line.replace(/^[-*]\s+/, '');
+        list.append(item);
+      });
+      notesNode.append(list);
+    } else {
+      const paragraph = document.createElement('p');
+      paragraph.textContent = lines.join(' ').trim() || `Для версии v${EXTENSION_VERSION} нет текстового описания изменений.`;
+      notesNode.append(paragraph);
+    }
+  } catch (error) {
+    notesNode.classList.add('release-notes-warning');
+    const message = document.createElement('p');
+    message.textContent = `Не удалось прочитать историю установленной версии v${EXTENSION_VERSION}: ${error.message || String(error)}. Проверьте целостность папки расширения.`;
+    notesNode.append(message);
+  } finally {
+    notesNode.removeAttribute('aria-busy');
   }
 }
+
+async function getAvailableReleaseNotes(settings, version, releaseBody) {
+  const body = String(releaseBody || '').trim();
+  if (body) return body;
+
+  // Remote notes are authoritative for the available release. The packaged
+  // changelog is only a clearly labelled fallback for a local/unpublished build.
+  try {
+    const rawUrl = `https://raw.githubusercontent.com/${settings.repo}/${settings.branch}/GITHUB_UPDATES.md`;
+    const response = await fetch(rawUrl);
+    if (response.ok) {
+      const section = extractReleaseNotesSection(await response.text(), version);
+      if (section) return `Описание GitHub Release пустое. История этой версии из GITHUB_UPDATES.md в GitHub:\n\n${section}`;
+    }
+  } catch (_) { /* Try the packaged copy below. */ }
+
+  try {
+    const packagedUrl = chrome.runtime.getURL('GITHUB_UPDATES.md');
+    const response = await fetch(packagedUrl);
+    if (response.ok) {
+      const section = extractReleaseNotesSection(await response.text(), version);
+      if (section) return `Описание GitHub Release пустое. История этой версии из GITHUB_UPDATES.md в установленном архиве (локальный резервный источник):\n\n${section}`;
+    }
+  } catch (_) { /* Use a clear empty-state message below. */ }
+
+  return `В описании GitHub Release v${version} нет списка изменений, а соответствующий раздел не найден в GITHUB_UPDATES.md.`;
+}
+
 function renderAvailableReleaseNotes(release) {
   const versionNode = $('available-release-version');
   const notesNode = $('available-release-notes');
   const linkNode = $('available-release-link');
   if (versionNode) versionNode.textContent = release?.version ? `v${release.version}` : 'не проверено';
-  if (notesNode) notesNode.textContent = String(release?.body || '').trim() || 'В описании GitHub Release пока нет списка изменений.';
+  if (notesNode) notesNode.textContent = String(release?.body || '').trim() || 'В описании GitHub Release и GITHUB_UPDATES.md пока нет списка изменений.';
   if (linkNode) {
     if (release?.url) {
       linkNode.href = release.url;
@@ -1782,7 +1872,8 @@ async function checkGitHubUpdates(silent = false) {
     const release = await response.json();
     releaseLoaded = true;
     const releaseVersion = String(release.tag_name || release.name || '').replace(/^v/i, '');
-    renderAvailableReleaseNotes({ version: releaseVersion, body: release.body, url: release.html_url });
+    const releaseNotes = await getAvailableReleaseNotes(settings, releaseVersion, release.body);
+    renderAvailableReleaseNotes({ version: releaseVersion, body: releaseNotes, url: release.html_url });
     const asset = (release.assets || []).find((item) => item.name === 'google-region-monitor.zip')
       || (release.assets || []).find((item) => /google.*region.*monitor.*\.zip$/i.test(item.name));
     const isNewer = isVersionNewer(releaseVersion, EXTENSION_VERSION);
@@ -1831,6 +1922,7 @@ function profileToConfigEntry(profile, id) {
     resultLangs: profile.resultLangs || '',
     region: profile.region || '',
     profileGroup: profile.hasLocalMetadataOverride ? profile.originalStandardProfileGroup : (profile.profileGroup || ''),
+    queryGroupsRevision: 2,
     queryGroups: normalizeProfileQueryGroups(profile).map((group) => ({ id: group.id, name: group.name, queries: [...group.queries] })),
     queries: flattenQueryGroups(profile.queryGroups)
   };

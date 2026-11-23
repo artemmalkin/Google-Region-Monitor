@@ -90,6 +90,11 @@
               },
               "additionalProperties": true
             }
+          },
+          "queryGroupsRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
           }
         },
         "additionalProperties": true

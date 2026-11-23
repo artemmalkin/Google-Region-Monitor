@@ -143,3 +143,6 @@ footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 
 .query-group-remove { width: 32px; height: 34px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--red); font-size: 18px; }
 .query-group-editor-card textarea { min-height: 76px; font: 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .query-group-remove:disabled { opacity: .35; cursor: not-allowed; }
+
+.release-notes-warning { padding: 9px; border: 1px solid #d93025; border-radius: 8px; background: #fce8e6; color: #8c1d18; }
+.release-notes-warning p { margin: 0; }

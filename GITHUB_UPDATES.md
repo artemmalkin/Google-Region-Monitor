@@ -1,4 +1,19 @@
-# GitHub update instructions — v1.8.0
+# GitHub update instructions — v1.8.2
+
+## 1.8.2
+
+- В стандартных профилях запросы разделены на две обычные редактируемые группы данных: «Основные запросы» и «Росатом и его проекты». В коде мониторинга нет специальной логики для этих названий.
+- В профилях Вьетнама, Индонезии и Китая сохранены дословно три старые поисковые строки Rosatom из исходного каталога v1.5.4.
+- Добавлено `queryGroupsRevision: 2`: устаревшие сгруппированные GitHub-профили однократно обновляются до новой структуры, при этом сохраняются пользовательские дополнительные группы и строки.
+- История установленной версии берётся только из точного раздела текущей версии в локальном `GITHUB_UPDATES.md`. Если запись версии отсутствует, расширение сообщает об этом, не показывая чужие изменения.
+- Если описание GitHub Release пустое, история доступной версии сначала ищется в удалённом `GITHUB_UPDATES.md`, затем в локальном архиве с явной пометкой источника.
+
+## 1.8.1
+
+- The installed version shown in the panel is taken from `manifest.json`.
+- The bundled installed-version changelog declares its own version and is rendered only when it matches the manifest version.
+- A mismatch now shows a clear warning instead of displaying notes for one build under another build's version; the warning instructs users to replace the full unpacked folder from one ZIP archive.
+- The remote release card uses the GitHub Release body when present. If the body is empty, it falls back to the exact version section in the packaged or remote `GITHUB_UPDATES.md`, clearly labelling the source. A download button is shown only when that release is newer than the installed extension.
 
 ## 1.8.0
 
@@ -146,3 +161,13 @@ Workflow `.github/workflows/release.yml` проверит совпадение �
 - Для регионального фильтра ChatGPT целевой регион берётся только из названия выбранного профиля (`profile.name`).
 - Код Google `gl` и языковые настройки профиля удалены из входных данных ChatGPT.
 - В JSON-запрос передаётся строковое поле `region` с названием профиля; результаты поиска передаются отдельно для идентификации самого СМИ.
+
+
+## Примечание об истории v1.5.4
+
+В исходном архиве v1.5.4 `GITHUB_UPDATES.md` содержит записи до v1.5.1 включительно и не содержит отдельного раздела v1.5.4. Поэтому интерфейс не должен приписывать v1.5.4 функции, добавленные в v1.8.0 и позднее. Новая логика показывает только точное совпадение версии; при отсутствии раздела выводится явное сообщение.
+
+## 1.5.4
+
+В исходном архиве v1.5.4 нет отдельной записи об изменениях: история в том архиве заканчивается на v1.5.1. Функции групп страновых профилей и групп поисковых запросов относятся к v1.8.0 и не должны отображаться как изменения v1.5.4.
+
