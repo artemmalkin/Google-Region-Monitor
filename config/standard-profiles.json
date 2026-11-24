@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T21:07:43.182Z",
+  "updatedAt": "2026-11-24T10:36:41.400Z",
   "profiles": [
     {
       "id": "argentina",
@@ -139,22 +139,22 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
-            "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")"
+            "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\") -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com",
+            "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\") -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+            "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com"
           ]
         }
       ],
       "queries": [
-        "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
-        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")",
-        "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+        "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\") -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com",
+        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\") -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com",
+        "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com"
       ]
     },
     {
