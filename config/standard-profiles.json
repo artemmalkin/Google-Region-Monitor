@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-25T21:18:13.976Z",
+  "updatedAt": "2026-11-25T21:27:02.810Z",
   "profiles": [
     {
       "id": "argentina",
@@ -195,7 +195,7 @@
     {
       "id": "indoneziya",
       "name": "Индонезия",
-      "interfaceLang": "id",
+      "interfaceLang": "ru",
       "resultLangs": "id",
       "region": "ID",
       "profileGroup": "Восточная и Юго-Восточная Азия",
