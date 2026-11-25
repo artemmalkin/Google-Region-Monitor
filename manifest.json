@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Google Region Monitor",
-  "version": "1.9.0",
-  "description": "Региональный мониторинг Google с настраиваемыми группами профилей и поисковых запросов, профилями поиска и GitHub-синхронизацией.",
+  "version": "1.9.1",
+  "description": "Региональный мониторинг Google с браузерным поиском, 2Captcha Google Search API и Scrape (HTML), профилями и отчётами.",
   "minimum_chrome_version": "116",
   "permissions": [
     "sidePanel",
@@ -16,11 +16,13 @@
   ],
   "host_permissions": [
     "https://www.google.com/*",
+    "https://scraper.2captcha.com/*",
     "https://api.github.com/*",
     "https://raw.githubusercontent.com/*",
     "https://chatgpt.com/*",
     "https://*.chatgpt.com/*",
-    "https://chat.openai.com/*"
+    "https://chat.openai.com/*",
+    "https://api.2captcha.com/*"
   ],
   "background": {
     "service_worker": "background.js"

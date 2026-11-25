@@ -1,4 +1,72 @@
-# GitHub update instructions — v1.9.0
+# GitHub update instructions — v1.9.1
+
+## 1.9.1 — release cleanup, one-task Google Search pagination, and billing statistics
+
+- Removed the embedded manual 2Captcha developer console, its controls, styles, scripts, test file, and the now-unused clipboard permission. Normal monitoring, API-key storage, and API-log export remain available.
+- Each `google_search` query now creates one Scraper API task with `page_num` equal to the selected page count (1–10). Multi-page HTML is returned in the same response using `with_html: true`; no separate offset task is created for each page.
+- The standalone `scrape` backend is unchanged: it still creates one `task_type: "scrape"` task for each selected Google page.
+- The explicit statistics refresh now loads `getBalance` and `task_history` for both `google_search` and `scrape`. Average cost uses completed `done` records and their `price` for the selected backend; last-report cost is reconciled using the report's saved response IDs.
+- Task history is not requested automatically. The internal `x-debug.price` value is not used for billing calculations.
+
+## 1.10.1 — fix false CAPTCHA detection in Scrape HTML
+
+- Fixed a false positive: generic Google page scripts (`hasCaptchaSupport=true`, shared `/sorry/index` handlers) are no longer treated as an actual CAPTCHA page.
+- CAPTCHA detection now examines visible body text after removing scripts/styles and checks concrete challenge elements/forms.
+- Validated against a real 2Captcha response: HTTP 200 with an ordinary Google SERP containing seven organic result headings. The previous detector stopped before page 2 and page 3.
+
+
+## 1.10.0 — page-by-page 2Captcha Scrape mode
+
+- Added a separate **2Captcha Scrape (HTML)** monitoring backend. The existing `google_search` backend remains available for side-by-side comparison.
+- Each selected Google results page is fetched with one `task_type: "scrape"` task using `data_format: "raw"` and `format: "json"`; the extension parses the returned `body` HTML locally.
+- Pagination uses ordinary Google offsets: no `start` for page 1, then `start=10`, `start=20`, and so on. Profile language/region, time filter, and `filter=0` stay in the Google URL.
+- Added extraction of organic result titles, links, and snippets from each HTML page. Successfully fetched empty pages are retained in the report; failed pages are reported as missing.
+- Further tasks stop when Google returns a CAPTCHA/automated-traffic page or target HTTP 403/429.
+- API exchange logging records each Scrape request and raw response while redacting the API key and Authorization header.
+
+## 1.9.8 — corrected 2Captcha offset range
+
+- Page 1 uses the base URL with `page_num=1`; page 2 uses the documented `start=10` mode without `page_num`.
+- Pages 3 onward use `start=20` and `page_num=max(2, N-2)`, following the documented `start=20, page_num=2` example.
+- For a 3-page selection, the API can return pages 3 and 4; page 4 is intentionally excluded from the final report.
+- Removed the previous `start=20` + `page_num=1` request pattern that returned `no_results` in the v1.9.7 diagnostic log.
+- A multi-page query uses no more than three sequential API tasks. Automatic balance/history requests remain disabled.
+
+## 1.9.7 — initial offset pagination
+
+- Page 1 used the base URL with `page_num=1`; page 2 used `start=10` without `page_num`; pages 3–N used `start=20` with `page_num=N-2`.
+- Requests ran sequentially with a 750 ms pause; a 3–10-page query used up to three API tasks.
+- Absolute `page_position.page` numbering was preserved and missing pages were reported rather than fabricated.
+
+## 1.9.6
+
+- A single `google_search` task requested the selected range with `page_num` and `with_html: true`.
+- HTML-derived organic results were merged with structured results, and pages missing from the API response were reported rather than invented.
+- The API exchange log retained response bodies and HTML while redacting credentials.
+
+## 1.9.5
+
+- Added a post-run **Download 2Captcha API log** button. It exports a JSON trace of every API request and response, including polling requests, HTTP status, useful response headers, raw response bodies, and network errors.
+- The trace is retained locally in memory for the most recent run; downloading it performs no new API requests.
+- API keys and Authorization values are redacted before logging and export. The log includes search queries and result payloads, so review it before publishing publicly.
+- The button is shown after a 2Captcha report or a failed 2Captcha run whenever diagnostic events are available.
+
+## 1.9.4
+
+- Multi-page 2Captcha search uses the documented `pages` parameter for the initial combined request.
+- If the combined response omits pages, only the missing offsets are fetched with separate `start=10`, `start=20`, etc. requests; the per-page fallback omits the `pages` parameter as recommended by 2Captcha.
+- Missing-page requests run sequentially with a 500 ms pause; pages already received are never requested again.
+- If `/tasks/sync` returns `408`/`pending`, the extension retrieves the same task using `response_id` at a 3-second interval instead of creating a duplicate task.
+- The monitoring log reports the number of API tasks and collected pages per query.
+- Removed the redundant log text about balance/history requests. Automatic balance and task-history requests remain disabled.
+
+## 1.9.3
+
+- Для многостраничного поиска 2Captcha используется документированный параметр `page_num` (1–10); из поискового URL перед отправкой удаляются неподдерживаемые `num` и `filter`, а также `start`.
+- Результаты группируются по `page_position.page`; если поле отсутствует, номер страницы вычисляется по абсолютному `position`.
+- Мониторинг больше не запрашивает баланс и историю расходов до/после отчёта. При открытии расширения и сохранении ключа автоматические запросы статистики также не выполняются.
+- HTML-отчёт больше не содержит баланс, оценку оставшихся заданий или статистику стоимости.
+- Кнопка «Обновить баланс» выполняет один отдельный запрос `getBalance`; история задач не запрашивается. Средняя цена и последний подтверждённый расход остаются только в локальном кеше.
 
 ## 1.9.0
 

@@ -127,6 +127,32 @@
         <label class="field-label" for="monitor-profile">Профиль региона</label>
         <select id="monitor-profile"></select>
 
+        <label class="field-label" for="search-backend">Источник поисковой выдачи</label>
+        <select id="search-backend">
+          <option value="browser">Обычный режим — мой браузер</option>
+          <option value="2captcha">2Captcha Google Search API (структурированные результаты)</option>
+          <option value="2captcha-scrape">2Captcha Scrape (HTML каждой страницы)</option>
+        </select>
+        <div id="two-captcha-settings" class="api-settings" hidden>
+          <label class="field-label" for="two-captcha-api-key">API-ключ 2Captcha</label>
+          <input id="two-captcha-api-key" type="password" autocomplete="off" placeholder="Введите API key">
+          <button id="save-two-captcha-key" class="button button-secondary button-compact" type="button">Сохранить API-ключ</button>
+          <p class="field-help">Ключ хранится локально в Chrome Storage. Во время мониторинга выполняются только задания выбранного метода. Баланс запрашивается отдельно и только по нажатию кнопки. Не публикуйте ключ и не добавляйте его в GitHub.</p>
+          <div class="two-captcha-stats" aria-live="polite">
+            <div class="two-captcha-stat"><span>Баланс аккаунта</span><strong id="two-captcha-balance">—</strong></div>
+            <div class="two-captcha-stat"><span>Доступно API-заданий (оценка)</span><strong id="two-captcha-available">—</strong></div>
+            <div class="two-captcha-stat"><span>Средняя стоимость задания выбранного метода</span><strong id="two-captcha-average-cost">—</strong></div>
+            <div class="two-captcha-stat"><span>Последний отчёт (по истории 2Captcha)</span><strong id="two-captcha-last-report">—</strong></div>
+          </div>
+          <div class="two-captcha-stats-actions">
+            <span id="two-captcha-stats-updated" class="field-help">Статистика ещё не загружена.</span>
+            <button id="refresh-two-captcha-stats" class="button button-secondary button-compact" type="button">Обновить статистику</button>
+          </div>
+          <p class="field-help">По нажатию «Обновить статистику» загружаются баланс и история завершённых заданий обоих методов 2Captcha. Средняя стоимость и оценка доступных заданий рассчитываются для выбранного метода по последним доступным успешным заданиям; стоимость последнего отчёта — по совпадающим response_id. Автоматические запросы статистики не выполняются.</p>
+
+
+        </div>
+
         <div class="section-heading compact-heading query-heading">
           <div>
             <h3>Запросы для отчёта</h3>
@@ -185,6 +211,7 @@
           <button id="run-report" class="button button-primary button-large" type="button">Сформировать отчёт</button>
           <button id="stop-monitor" class="button button-secondary button-large" type="button" disabled>Остановить</button>
         </div>
+        <button id="download-api-log" class="button button-secondary button-large api-log-download" type="button" hidden>Скачать лог запросов и ответов 2Captcha</button>
         <div id="run-status" class="run-status" role="status">Готово к запуску.</div>
         <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
         <div id="run-log" class="run-log" aria-live="polite"></div>

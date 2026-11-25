@@ -1,8 +1,37 @@
-# Google Region Monitor — Chrome extension v1.9.0
+# Google Region Monitor — Chrome extension v1.9.1
 
-Расширение Manifest V3 для мониторинга Google Search по страновым профилям. В каталоге 19 стандартных профилей из методичек по Латинской Америке, Южной Азии, Восточной и Юго-Восточной Азии. Профили можно объединять в произвольные группы (например, «Южная Азия»), а поисковые выражения внутри каждого профиля — в пользовательские группы с любыми названиями. Ни названия, ни тематика групп не зашиты в код. Также доступны локальные пользовательские профили, синхронизация стандартных профилей из GitHub, минимальный глобальный интервал между переходами Google, последовательная пагинация, экспорт HTML-отчёта и опциональная фильтрация региональной принадлежности СМИ через веб-версию ChatGPT.
+Расширение Manifest V3 для мониторинга Google Search по страновым профилям. В каталоге 19 стандартных профилей из методичек по Латинской Америке, Южной Азии, Восточной и Юго-Восточной Азии. Профили можно объединять в произвольные группы (например, «Южная Азия»), а поисковые выражения внутри каждого профиля — в пользовательские группы с любыми названиями. Ни названия, ни тематика групп не зашиты в код. Также доступны локальные пользовательские профили, синхронизация стандартных профилей из GitHub, минимальный глобальный интервал между переходами Google, последовательная пагинация, выгрузка диагностического лога 2Captcha, экспорт HTML-отчёта и опциональная фильтрация региональной принадлежности СМИ через веб-версию ChatGPT.
 
 Поиск использует параметр `filter=0`, чтобы Google включал результаты, которые обычно скрывает как очень похожие на уже показанные. Этот параметр повторно добавляется к ссылкам пагинации. Страницы обходятся последовательно и с общей пользовательской задержкой; `num=100` не используется. Google CAPTCHA и другие защитные ограничения не обходятся.
+
+## Публикация исходников на GitHub
+
+В корень репозитория загружается содержимое папки `Google-Region-Monitor` из архива. Основные сопровождающие файлы:
+
+- `README.md` — описание, функции, установка, настройка и диагностика.
+- `updates.md` — человекочитаемая история изменений для GitHub.
+- `GITHUB_UPDATES.md` — копия истории изменений, которую читает интерфейс расширения для блока версии.
+- `manifest.json` — версия расширения Chrome.
+- `config/standard-profiles.json` — стандартный каталог профилей.
+- `tests/` — автоматические тесты логики профилей и 2Captcha.
+
+Перед публикацией проверьте `github-config.js`: там указываются только публичные owner/repository/branch и путь к JSON профилей. **Не помещайте API-ключ 2Captcha, GitHub Personal Access Token, cookies или иные секреты в репозиторий.** API-ключи пользователей хранятся локально в Chrome Storage.
+
+Для этого релиза создайте Git-тег `v1.9.1` и GitHub Release с тем же номером версии. Необходимые каталоги и файлы уже находятся в корне проекта; загружайте их как исходники репозитория, а не вложенный ZIP-файл.
+
+**Важно о переходе с v1.10.1:** этот архив собран на базе кода v1.10.1, но номер в `manifest.json` намеренно установлен в `1.9.1` по запросу. Встроенная проверка версий считает `1.9.1` старее `1.10.1`, поэтому переход с установленной v1.10.1 на этот архив выполняется вручную, а не через кнопку обновления.
+
+## Релиз 1.9.1 — упрощение API и исправление статистики 2Captcha
+
+- Удалена встроенная консоль ручных тестовых запросов 2Captcha; обычный мониторинг, API-ключ и экспорт диагностического лога сохранены.
+- В режиме **2Captcha Google Search API** один поисковый запрос создаёт одно задание с `page_num` от 1 до 10. Для нескольких страниц HTML запрашивается в том же ответе через `with_html: true`; дополнительные offset-задания больше не создаются.
+- В режиме **2Captcha Scrape** сохранён отдельный запрос `task_type: "scrape"` на каждую страницу: этот метод получает HTML конкретного URL и не заменяется на `google_search`.
+- Кнопка обновления статистики теперь отдельно по нажатию получает баланс и историю `google_search`/`scrape`. Средняя цена рассчитывается по завершённым заданиям со статусом `done`, а стоимость последнего отчёта — по его `response_id` и фактическому полю `price` из истории.
+- История расходов не загружается автоматически при открытии расширения или создании отчёта. Внутреннее поле `x-debug.price` не используется для расчёта стоимости.
+
+## Исправление 1.10.1 — детектор CAPTCHA для Scrape
+
+Google Search вставляет в обычную страницу результатов JavaScript-код с переменными и обработчиками CAPTCHA (например, `hasCaptchaSupport=true` и общий путь `/sorry/index`). Эти строки сами по себе не означают, что Google показал проверку. Начиная с v1.10.1 Scrape-парсер анализирует видимый текст и реальные элементы challenge-формы, исключая `script`, `style` и другие невидимые блоки. Это предотвращает ложную остановку на обычной SERP.
 
 ## Установка
 
@@ -164,11 +193,41 @@
 
 В присланном HTML выдачи используется индонезийский интерфейс (`lang="id"`), контейнеры результатов `.MjjYud`, блок `#rso`, сниппеты `.VwiC3b` и ссылка пагинации `#pnnext`. Эти селекторы теперь стоят первыми в алгоритме сбора.
 
+
+## Режим 2Captcha Scrape (v1.10.0)
+
+В разделе «Мониторинг» доступен отдельный источник **«2Captcha Scrape (HTML каждой страницы)»**. В отличие от `google_search`, этот режим не использует структурированный парсер Search API: для каждой выбранной страницы расширение отправляет собственное задание `task_type: "scrape"` на `/tasks/sync` с `data_format: "raw"` и `format: "json"`. Полученное поле `body` разбирается локально в расширении — извлекаются заголовки, ссылки и сниппеты из Google HTML.
+
+Пагинация выполняется прямыми URL Google: первая страница — без `start`, вторая — `start=10`, третья — `start=20` и далее с шагом 10. Параметры выбранного профиля и периода (`hl`, `gl`, `lr`, `tbs`) сохраняются; `filter=0` также передаётся в URL этого режима. Для каждой страницы создаётся отдельное API-задание, поэтому число заданий равно числу реально запрашиваемых страниц на каждый поисковый запрос. Задания выполняются последовательно с паузой 750 мс.
+
+При ответе Google с CAPTCHA/ограничением автоматических запросов или целевым HTTP 403/429 дальнейшие страницы и запросы не отправляются. Успешно загруженная HTML-страница включается в отчёт даже тогда, когда парсер не нашёл в ней органических результатов. Неудачно загруженные страницы помечаются как отсутствующие.
+
+Старый вариант **«2Captcha Google Search API»** оставлен без изменений для сравнения. Сначала рекомендуется проверить Scrape на одном запросе и 2–3 страницах, сравнить HTML-отчёт и скачанный JSON API-лог, затем увеличить объём мониторинга. Кнопка скачивания лога не создаёт дополнительных запросов к 2Captcha; в файле сохраняются тела запросов/ответов, а API-ключ и Authorization маскируются.
+
+## Режим 2Captcha Google Search API (v1.9.1)
+
+Во вкладке «Мониторинг» можно выбрать **2Captcha Google Search API** вместо поиска в локальном браузере. Ключ хранится в `chrome.storage.local`; запросы выполняются через `scraper.2captcha.com`, без открытия Google в личном браузере.
+
+Для каждого выбранного поискового выражения создаётся **одно** задание `task_type: "google_search"`. В его JSON передаётся `page_num`, равный выбранному числу страниц (1–10), а URL остаётся базовым — без `start`, `num` и `filter`. При выборе более одной страницы в том же задании включается `with_html: true`. Структурированные `groups.organic.items` и HTML страниц объединяются по абсолютным номерам `page_position.page`; если часть страниц не пришла, они отмечаются как отсутствующие, повторные задания для них не создаются.
+
+Таким образом, в режиме Google Search API количество заданий на один поисковый запрос не зависит от выбранного числа страниц: **одно задание на запрос**, а не по одному заданию на каждую страницу. Ограничение 2Captcha для `page_num` — от 1 до 10.
+
+Режим **2Captcha Scrape (HTML каждой страницы)** работает иначе и сохранён отдельно: он отправляет по одному `task_type: "scrape"` заданию на страницу с URL-параметром `start=0`, `start=10`, `start=20` и далее. HTML из `body` разбирается локально. Не следует путать стоимость этих двух режимов: у Scrape задание по-прежнему создаётся на каждую страницу.
+
+### Статистика и стоимость
+
+Кнопка **«Обновить статистику»** запускает отдельные запросы `getBalance` и `GET /task_history` для типов `google_search` и `scrape`. Автоматических запросов к истории нет. Для оценки среднего расхода используются последние доступные завершённые задания выбранного метода (`google_search` или `scrape`) со статусом `done` и числовым `price`; оценка числа доступных заданий — это баланс, делённый на среднюю цену этого метода.
+
+После каждого отчёта расширение сохраняет его `response_id`. При следующем ручном обновлении истории фактические цены сопоставляются с этими ID, и стоимость последнего отчёта показывается только после подтверждения всех его заданий историей. Если ID ещё не появились в истории или история недоступна, сумма не угадывается и остаётся пустой. Внутренний `x-debug.price` намеренно не используется: для биллинга применяется `price` из `task_history`.
+
+После завершения мониторинга через 2Captcha доступна кнопка **«Скачать лог запросов и ответов 2Captcha»**. Она сохраняет уже собранные данные и не отправляет дополнительные запросы; API-ключ и `Authorization` маскируются. Лог может содержать поисковые запросы и результаты Google, поэтому проверьте его перед публикацией в открытом репозитории.
+
 ## Локальная проверка
 
 ```bash
 node --check sidepanel.js
 node --check background.js
+node --test tests/*.test.js
 ```
 
 
@@ -272,3 +331,43 @@ node --check background.js
 - Добавлено `queryGroupsRevision`: старый сгруппированный GitHub-кеш мигрирует к новой структуре один раз, сохраняя дополнительные пользовательские группы и строки. После публикации профиля актуальной ревизии GitHub-группы становятся источником истины.
 - Блок установленной версии извлекает только точный раздел текущей версии из локального `GITHUB_UPDATES.md`. Если раздела нет, сообщает об этом и не подставляет описание другой версии.
 - Для пустого описания GitHub Release история доступной версии ищется сначала в удалённом `GITHUB_UPDATES.md`; локальная копия используется только как помеченный резервный источник.
+
+
+## v1.9.8 — corrected 2Captcha offset range
+
+- Page 1 is requested as a separate task with `page_num: 1` and no `start` offset.
+- For exactly two requested pages, page 2 uses `start=10` without `page_num`, matching the documented single-page mode.
+- For three or more requested pages, the second task uses `start=10` and `page_num=N-1` to collect the remaining absolute range from page 2 through page N.
+- Removed the previous `start=20` + `page_num=1` request pattern, which returned `no_results` in the v1.9.7 diagnostic log.
+- The monitor makes no more than two sequential API tasks per query; automatic balance and history requests remain disabled.
+
+## v1.9.7 — offset-based multi-page pagination for 2Captcha
+
+- Page 1 used the base URL with `page_num=1`; page 2 used `start=10` without `page_num`; pages 3–N used `start=20` with `page_num=N-2`.
+- Requests ran sequentially with a 750 ms pause; a 3–10-page search used up to three API tasks per query.
+- Structured `page_position.page` values were treated as absolute. The extension did not relabel a page-1 response as a later page when a worker ignored `start`.
+- HTML and structured organic results were merged within their requested absolute page ranges; missing pages were reported, not invented.
+- API logs recorded each request's range, offset, `page_num`, response ID, status, and returned HTML/structured page counts.
+
+## v1.9.5 — 2Captcha API diagnostics and downloadable logs
+
+- A **Download 2Captcha API log** button appears after a 2Captcha run when diagnostic events are available.
+- The JSON log includes request endpoints and parameters, safe headers, HTTP statuses, selected response headers, raw response bodies, polling exchanges, and network errors.
+- The log can be downloaded without making extra requests to 2Captcha. API keys and Authorization values are redacted.
+
+## v1.9.4 — reliable multi-page 2Captcha collection
+
+- Use the documented `pages` parameter for the initial multi-page request.
+- Fall back to separate `start=10`, `start=20`, etc. requests for missing pages; those tasks omit the multi-page parameter.
+- Run fallback requests sequentially with a short delay; never launch page requests concurrently.
+- Handle synchronous `408/pending` responses by retrieving the same task through its `response_id`, rather than creating a duplicate search task.
+- Show the actual number of API tasks and collected pages in the monitoring log.
+- Remove the redundant log suffix about balance/history requests; automatic balance and task-history calls remain disabled.
+
+## v1.9.3 — 2Captcha paging and reduced API traffic
+
+- Use `page_num` for multi-page Google Search requests; strip unsupported `num` and `filter` parameters from the Google URL.
+- Group returned organic results by `page_position.page`, with a fallback to the absolute `position` field.
+- Do not call balance or task-history endpoints before/after each report.
+- The HTML report no longer contains account balance, request estimate, or API cost statistics.
+- The balance button makes a single explicit balance request; saving the API key does not trigger an automatic request.

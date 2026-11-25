@@ -20,6 +20,8 @@ let isRunning = false;
 let stopRequested = false;
 let stopSignalResolver = null;
 let stopSignalPromise = null;
+let lastTwoCaptchaApiLog = [];
+let lastTwoCaptchaApiLogContext = null;
 const REGION_CHATGPT_FILTER_SETTING = 'regionMediaChatGPTFilterEnabled';
 const REGION_CHATGPT_REASONING_SETTING = 'regionMediaChatGPTReasoningEnabled';
 const REGION_CHATGPT_REASONING_EFFORT_SETTING = 'regionMediaChatGPTReasoningEffort';
@@ -763,8 +765,9 @@ function includeSimilarResults(urlValue) {
 function extractGoogleResults() {
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
   const pageText = clean(document.body?.innerText || '');
-  const blocked = /unusual traffic|automated queries|captcha|sorry\/index|our systems have detected/i.test(pageText)
-    || !!document.querySelector('form#captcha-form, iframe[src*="recaptcha"], #recaptcha');
+  const blocked = /our systems have detected unusual traffic|unusual traffic from your computer network|automated queries|please verify (?:that )?you are (?:not a robot|human)/i.test(pageText)
+    || /\/sorry\/index/i.test(location.pathname)
+    || !!document.querySelector('form#captcha-form, form[action*="/sorry/index"], iframe[src*="recaptcha"], #recaptcha');
   if (blocked) return { blocked: true, title: document.title, url: location.href, results: [], nextUrl: null, reason: 'Google показал CAPTCHA или ограничение автоматических запросов.' };
   if (/before you continue to google|before you proceed|прежде чем продолжить/i.test(pageText) && !document.querySelector('#search')) {
     return { blocked: true, title: document.title, url: location.href, results: [], nextUrl: null, reason: 'Google показал страницу согласия с условиями/cookie.' };
@@ -846,14 +849,16 @@ function createReportHtml(report) {
         : `<p class="filter-summary"><b>Проверка региональности СМИ:</b> пропущена — ссылок для проверки нет.</p>`;
   const rows = report.queries.map((queryReport) => {
     const pages = queryReport.pages.map((page, pageIndex) => {
+      let pageNumber = pageIndex + 1;
+      try { pageNumber = Math.floor(Number(new URL(page.url).searchParams.get('start') || 0) / 10) + 1; } catch (_) { /* Keep the display index. */ }
       const resultCards = page.results.map((result, index) => `
         <article class="result">
-          <div class="result-number">${index + 1}. Страница ${pageIndex + 1}</div>
+          <div class="result-number">${index + 1}. Страница ${pageNumber}</div>
           <h3><a href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(result.title)}</a></h3>
           <div class="url"><a href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(result.url)}</a></div>
           <p>${escapeHtml(result.snippet)}</p>
         </article>`).join('');
-      return `<section class="page"><h3>Страница ${pageIndex + 1}</h3><p class="meta">${escapeHtml(page.totalText || page.url)}</p>${resultCards || '<p>Результаты не найдены или не распознаны.</p>'}</section>`;
+      return `<section class="page"><h3>Страница ${pageNumber}</h3><p class="meta">${escapeHtml(page.totalText || page.url)}</p>${resultCards || '<p>Результаты не найдены или не распознаны.</p>'}</section>`;
     }).join('');
     return `<section class="query"><h2>Запрос: ${escapeHtml(queryReport.query)}</h2>${queryReport.error ? `<p class="warning">${escapeHtml(queryReport.error)}</p>` : ''}${pages}</section>`;
   }).join('');
@@ -865,7 +870,7 @@ function createReportHtml(report) {
 <style>
 :root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}.filter-summary{padding:10px 12px;background:#f1f5fb;border-radius:8px;font-size:12px}.filter-summary.warning{color:#8b1e1e;background:#fce8e6}.hidden-results{margin:18px 0;padding:14px 16px;background:#fff;border:1px solid #e3e6eb;border-radius:12px}.hidden-results summary{cursor:pointer;font-weight:700;color:#3c4043}.hidden-intro{font-size:12px;color:#687078}.hidden-result{padding:12px 0;border-top:1px dashed #e5e8ec}.exclusion-reason{padding:9px 11px;background:#fff7e6;border-radius:7px;font-size:12px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
-<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Передача настроек:</b> язык, страна и фильтр языка передаются прямо в ссылке поиска (hl, gl, lr)<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Минимальный интервал Google:</b> ${Number(report.googleSearchMinIntervalSeconds ?? 2)} сек.<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : report.googleBlocked ? 'Google ограничил запросы; сохранены ранее собранные результаты' : 'Завершён'}</p>${filterSummary}</header>
+<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Передача настроек:</b> язык, страна и фильтр языка передаются прямо в ссылке поиска (hl, gl, lr)<br><b>Похожие результаты:</b> ${report.searchBackend === '2captcha' ? 'параметр filter=0 не используется в Google Search API' : report.searchBackend === '2captcha-scrape' ? 'параметр filter=0 передаётся в URL Google' : 'запрошено включение (filter=0)'}<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Источник выдачи:</b> ${report.searchBackend === '2captcha' ? '2Captcha Google Search API' : report.searchBackend === '2captcha-scrape' ? '2Captcha Scrape (HTML постранично)' : 'Браузер пользователя'}<br><b>Минимальный интервал Google:</b> ${report.searchBackend.startsWith('2captcha') ? 'не применяется; API-задания выполняются последовательно' : `${Number(report.googleSearchMinIntervalSeconds ?? 2)} сек.`}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : report.googleBlocked ? 'Google ограничил запросы; сохранены ранее собранные результаты' : 'Завершён'}</p>${filterSummary}</header>
 ${rows}
 ${hiddenSection}
 <footer>Отчёт создан расширением Google Region Monitor. Ссылки на результаты открываются в новых вкладках.</footer></body></html>`;
@@ -1194,6 +1199,974 @@ $('chatgpt-region-reasoning-effort').addEventListener('change', async (event) =>
   }
 });
 
+const SEARCH_BACKEND_SETTING = 'googleSearchBackend';
+const TWO_CAPTCHA_KEY_SETTING = 'twoCaptchaApiKey';
+
+async function loadSearchBackendSettings() {
+  const stored = await chrome.storage.local.get({
+    [SEARCH_BACKEND_SETTING]: 'browser',
+    [TWO_CAPTCHA_KEY_SETTING]: '',
+    twoCaptchaLastReportStats: null
+  });
+  $('search-backend').value = ['2captcha', '2captcha-scrape'].includes(stored[SEARCH_BACKEND_SETTING]) ? stored[SEARCH_BACKEND_SETTING] : 'browser';
+  $('two-captcha-api-key').value = stored[TWO_CAPTCHA_KEY_SETTING] || '';
+  $('two-captcha-settings').hidden = !$('search-backend').value.startsWith('2captcha');
+  renderTwoCaptchaStats(stored.twoCaptchaLastReportStats || null);
+  $('two-captcha-stats-updated').textContent = stored[TWO_CAPTCHA_KEY_SETTING]
+    ? 'Статистика загружена из локального кэша. Для обновления баланса нажмите кнопку.'
+    : 'Статистика ещё не загружена.';
+}
+$('search-backend').addEventListener('change', async (event) => {
+  const backend = ['2captcha', '2captcha-scrape'].includes(event.target.value) ? event.target.value : 'browser';
+  $('two-captcha-settings').hidden = !backend.startsWith('2captcha');
+  await chrome.storage.local.set({ [SEARCH_BACKEND_SETTING]: backend });
+});
+$('save-two-captcha-key').addEventListener('click', async () => {
+  const key = $('two-captcha-api-key').value.trim();
+  if (!key) {
+    setStatus($('run-status'), 'Введите API-ключ 2Captcha.', 'error');
+    return;
+  }
+  await chrome.storage.local.set({ [TWO_CAPTCHA_KEY_SETTING]: key });
+  setStatus($('run-status'), 'API-ключ 2Captcha сохранён локально.', 'success');
+  $('two-captcha-stats-updated').textContent = 'Ключ сохранён. Баланс можно обновить вручную.';
+});
+
+function formatTwoCaptchaMoney(value, maximumFractionDigits = 6) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '—';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD', minimumFractionDigits: 2,
+    maximumFractionDigits: Math.max(2, Math.min(8, maximumFractionDigits))
+  }).format(amount);
+}
+
+function renderTwoCaptchaStats(stats) {
+  $('two-captcha-balance').textContent = stats?.balance !== null && stats?.balance !== undefined
+    ? formatTwoCaptchaMoney(stats.balance, 4) : '—';
+  const availableEstimate = stats?.availableRequestsEstimate;
+  $('two-captcha-available').textContent = availableEstimate !== null && availableEstimate !== undefined && Number.isFinite(Number(availableEstimate))
+    ? `${Math.max(0, Math.floor(Number(availableEstimate))).toLocaleString('ru-RU')} задач` : '—';
+  $('two-captcha-average-cost').textContent = stats?.averageTaskCost !== null && stats?.averageTaskCost !== undefined
+    ? formatTwoCaptchaMoney(stats.averageTaskCost) : '—';
+  $('two-captcha-last-report').textContent = stats?.lastReportCost !== null && stats?.lastReportCost !== undefined
+    && stats?.lastReportRequests !== null && stats?.lastReportRequests !== undefined
+    ? `${formatTwoCaptchaMoney(stats.lastReportCost)} · ${Number(stats.lastReportRequests)} задач` : '—';
+  if (stats?.updatedAt) {
+    $('two-captcha-stats-updated').textContent = `Обновлено: ${new Date(stats.updatedAt).toLocaleString('ru-RU')}`;
+  }
+}
+
+async function fetchTwoCaptchaAccountBalance(apiKey) {
+  const response = await fetch('https://api.2captcha.com/getBalance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ clientKey: apiKey })
+  });
+  const raw = await response.text();
+  let payload;
+  try { payload = raw ? JSON.parse(raw) : {}; }
+  catch (_) { throw new Error(`Неожиданный ответ getBalance (HTTP ${response.status}).`); }
+  if (!response.ok || Number(payload.errorId) !== 0 || !Number.isFinite(Number(payload.balance))) {
+    throw new Error(payload.errorDescription || payload.error || `getBalance: HTTP ${response.status}, код ${payload.errorId ?? 'неизвестен'}`);
+  }
+  return Number(payload.balance);
+}
+
+async function fetchTwoCaptchaTaskHistory(apiKey, taskType, offset = 0, limit = 100) {
+  const params = new URLSearchParams({
+    task_type: taskType,
+    limit: String(limit),
+    offset: String(offset)
+  });
+  const requestUrl = `https://scraper.2captcha.com/task_history?${params.toString()}`;
+  const response = await fetch(requestUrl, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' }
+  });
+  const raw = await response.text();
+  let payload;
+  try { payload = raw ? JSON.parse(raw) : []; }
+  catch (_) { throw new Error(`Неожиданный ответ task_history (${taskType}, HTTP ${response.status}).`); }
+  if (!response.ok) {
+    throw new Error(payload?.error || payload?.message || `task_history (${taskType}): HTTP ${response.status}`);
+  }
+  if (!Array.isArray(payload)) throw new Error(`task_history (${taskType}) вернул неожиданный формат данных.`);
+  return payload;
+}
+
+async function fetchRecentTwoCaptchaTaskHistory(apiKey, taskType, expectedResponseIds = []) {
+  const expected = new Set(expectedResponseIds.map((id) => String(id)).filter(Boolean));
+  const history = [];
+  const limit = 100;
+  // Fetch the latest 100 entries for the average. If the last report is older
+  // in the history, continue paging until its response IDs are found (max 10 pages).
+  for (let offset = 0; offset < 1000; offset += limit) {
+    const batch = await fetchTwoCaptchaTaskHistory(apiKey, taskType, offset, limit);
+    history.push(...batch);
+    const found = new Set(history.map((entry) => String(entry?.response_id || '')).filter(Boolean));
+    const allReportTasksFound = expected.size === 0 || [...expected].every((id) => found.has(id));
+    if (allReportTasksFound || batch.length < limit) break;
+  }
+  return history;
+}
+
+function summarizeTwoCaptchaTaskHistory(history, reportResponseIds = []) {
+  const entries = Array.isArray(history) ? history : [];
+  const hasPrice = (entry) => entry && entry.price !== null && entry.price !== undefined
+    && String(entry.price).trim() !== '' && Number.isFinite(Number(entry.price));
+  const successful = entries.filter((entry) => entry?.status === 'done' && hasPrice(entry));
+  const totalCost = successful.reduce((sum, entry) => sum + Number(entry.price), 0);
+  const averageTaskCost = successful.length ? totalCost / successful.length : null;
+
+  const expectedIds = new Set((Array.isArray(reportResponseIds) ? reportResponseIds : [])
+    .map((item) => typeof item === 'string' ? item : item?.responseId)
+    .map((id) => String(id || '').trim()).filter(Boolean));
+  const matched = entries.filter((entry) => expectedIds.has(String(entry?.response_id || '')));
+  const reportHistoryComplete = expectedIds.size > 0 && matched.length === expectedIds.size && matched.every(hasPrice);
+  const lastReportCost = reportHistoryComplete
+    ? matched.reduce((sum, entry) => sum + Number(entry.price), 0)
+    : null;
+
+  return {
+    averageTaskCost,
+    successfulTaskCount: successful.length,
+    lastReportCost,
+    lastReportRequests: reportHistoryComplete ? matched.length : null,
+    lastReportHistoryComplete: reportHistoryComplete
+  };
+}
+
+async function refreshTwoCaptchaStats(apiKey = '') {
+  const stored = await chrome.storage.local.get({ [TWO_CAPTCHA_KEY_SETTING]: '', twoCaptchaLastReportStats: null });
+  const key = String(apiKey || stored[TWO_CAPTCHA_KEY_SETTING] || $('two-captcha-api-key').value || '').trim();
+  if (!key) {
+    $('two-captcha-stats-updated').textContent = 'Сначала сохраните API-ключ.';
+    return;
+  }
+  const button = $('refresh-two-captcha-stats');
+  button.disabled = true;
+  button.textContent = 'Обновляю…';
+  $('two-captcha-stats-updated').textContent = 'Запрашиваю баланс и историю заданий 2Captcha…';
+  try {
+    const previous = stored.twoCaptchaLastReportStats || {};
+    const storedReportIds = Array.isArray(previous.lastReportResponseIds) ? previous.lastReportResponseIds : [];
+    const idsByType = {
+      google_search: storedReportIds.filter((item) => !item?.taskType || item.taskType === 'google_search').map((item) => item?.responseId || item).filter(Boolean),
+      scrape: storedReportIds.filter((item) => item?.taskType === 'scrape').map((item) => item?.responseId).filter(Boolean)
+    };
+    const [balanceResult, googleHistoryResult, scrapeHistoryResult] = await Promise.allSettled([
+      fetchTwoCaptchaAccountBalance(key),
+      fetchRecentTwoCaptchaTaskHistory(key, 'google_search', idsByType.google_search),
+      fetchRecentTwoCaptchaTaskHistory(key, 'scrape', idsByType.scrape)
+    ]);
+    if (balanceResult.status === 'rejected') throw balanceResult.reason;
+
+    const historyErrors = [];
+    const history = [];
+    if (googleHistoryResult.status === 'fulfilled') history.push(...googleHistoryResult.value);
+    else historyErrors.push(`google_search: ${googleHistoryResult.reason?.message || googleHistoryResult.reason}`);
+    if (scrapeHistoryResult.status === 'fulfilled') history.push(...scrapeHistoryResult.value);
+    else historyErrors.push(`scrape: ${scrapeHistoryResult.reason?.message || scrapeHistoryResult.reason}`);
+
+    const reportIds = storedReportIds.map((item) => typeof item === 'string' ? item : item?.responseId).filter(Boolean);
+    const selectedTaskType = $('search-backend').value === '2captcha-scrape' ? 'scrape' : 'google_search';
+    const selectedHistoryResult = selectedTaskType === 'scrape' ? scrapeHistoryResult : googleHistoryResult;
+    const selectedHistory = selectedHistoryResult.status === 'fulfilled' ? selectedHistoryResult.value : [];
+    const selectedHistoryStats = summarizeTwoCaptchaTaskHistory(selectedHistory);
+    const reportStats = summarizeTwoCaptchaTaskHistory(history, reportIds);
+    const averageTaskCost = selectedHistoryResult.status === 'fulfilled' ? selectedHistoryStats.averageTaskCost : null;
+    const stats = {
+      ...previous,
+      balance: balanceResult.value,
+      averageTaskCost,
+      averageTaskType: selectedTaskType,
+      availableRequestsEstimate: averageTaskCost > 0 ? Math.floor(balanceResult.value / averageTaskCost) : null,
+      successfulTaskCount: selectedHistoryResult.status === 'fulfilled' ? selectedHistoryStats.successfulTaskCount : null,
+      lastReportCost: reportStats.lastReportCost,
+      lastReportRequests: reportStats.lastReportRequests,
+      lastReportHistoryComplete: reportStats.lastReportHistoryComplete,
+      historyTaskCount: history.length,
+      updatedAt: new Date().toISOString()
+    };
+    renderTwoCaptchaStats(stats);
+    await chrome.storage.local.set({ twoCaptchaLastReportStats: stats });
+    $('two-captcha-stats-updated').textContent = historyErrors.length
+      ? `Баланс обновлён; часть истории недоступна (${historyErrors.join('; ')}). Статистика выбранного метода обновлена, если его история загрузилась.`
+      : `Баланс и история заданий обновлены: ${new Date(stats.updatedAt).toLocaleString('ru-RU')}.`;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Обновить статистику';
+  }
+}
+
+$('refresh-two-captcha-stats').addEventListener('click', () => {
+  refreshTwoCaptchaStats().catch((error) => {
+    $('two-captcha-stats-updated').textContent = `Ошибка обновления: ${error.message || String(error)}`;
+  });
+});
+
+function downloadLastTwoCaptchaApiLog() {
+  if (!Array.isArray(lastTwoCaptchaApiLog) || !lastTwoCaptchaApiLog.length) {
+    setStatus($('run-status'), 'Для последнего запуска нет сохранённых обменов с 2Captcha.', 'error');
+    return;
+  }
+  const exportData = {
+    format: 'google-region-monitor-2captcha-api-log',
+    version: chrome.runtime.getManifest().version,
+    generatedAt: new Date().toISOString(),
+    security: {
+      apiKeyIncluded: false,
+      authorizationHeader: 'redacted',
+      note: 'Значение API-ключа и заголовок Authorization исключены из файла.'
+    },
+    report: lastTwoCaptchaApiLogContext || {},
+    events: lastTwoCaptchaApiLog
+  };
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  downloadBlob(
+    new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8' }),
+    `2captcha-api-log-${stamp}.json`
+  );
+}
+$('download-api-log').addEventListener('click', downloadLastTwoCaptchaApiLog);
+
+async function searchGoogleVia2Captcha(url, apiKey, maxPages, apiLog = []) {
+  function redactApiLogValue(value, propertyName = '') {
+    if (/authorization/i.test(propertyName)) return 'Bearer [REDACTED]';
+    if (/api.?key|token|secret|password/i.test(propertyName)) return '[REDACTED]';
+    if (Array.isArray(value)) return value.map((item) => redactApiLogValue(item));
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, redactApiLogValue(item, key)]));
+    }
+    if (typeof value === 'string') {
+      let safe = value;
+      if (apiKey) safe = safe.split(apiKey).join('[REDACTED_API_KEY]');
+      return safe.replace(/Bearer\s+[^\s"']+/gi, 'Bearer [REDACTED]');
+    }
+    return value;
+  }
+
+  function recordApiLog(entry) {
+    if (!Array.isArray(apiLog)) return;
+    apiLog.push(redactApiLogValue({ timestamp: new Date().toISOString(), ...entry }));
+  }
+
+  function safeResponseHeaders(response) {
+    const result = {};
+    for (const name of ['content-type', 'retry-after', 'x-debug', 'x-debug_response', 'date', 'request-id', 'x-request-id']) {
+      const value = response.headers?.get?.(name);
+      if (value) result[name] = value;
+    }
+    return result;
+  }
+
+  const baseSearchUrl = new URL(url);
+  baseSearchUrl.searchParams.delete('filter');
+  baseSearchUrl.searchParams.delete('num');
+  baseSearchUrl.searchParams.delete('start');
+
+  const taskMetas = [];
+  const pagesByNumber = new Map();
+
+  function makeTaskMeta(taskSpec) {
+    const pagesRequested = Number.isInteger(taskSpec.pageNum) ? taskSpec.pageNum : 1;
+    return {
+      taskType: 'google_search',
+      url: taskSpec.url,
+      startedAt: new Date().toISOString(),
+      responseId: '',
+      pageStart: taskSpec.pageStart,
+      pageEnd: taskSpec.pageEnd,
+      apiPageEnd: Number.isInteger(taskSpec.apiPageEnd) ? taskSpec.apiPageEnd : taskSpec.pageStart + pagesRequested - 1,
+      pagesRequested,
+      selectedPagesRequested: taskSpec.pageEnd - taskSpec.pageStart + 1,
+      pageParameter: Number.isInteger(taskSpec.pageNum) ? 'page_num' : 'not set',
+      pageNum: Number.isInteger(taskSpec.pageNum) ? taskSpec.pageNum : null,
+      withHtml: Boolean(taskSpec.withHtml),
+      serverPages: null,
+      htmlPagesReceived: 0,
+      htmlPagesParsed: 0,
+      htmlPagesWithResults: 0,
+      structuredPagesReceived: 0,
+      pagesAssembled: 0,
+      status: '',
+      error: ''
+    };
+  }
+
+  function readDebugHeader(response, taskMeta) {
+    const header = response.headers?.get?.('x-debug');
+    let debug = {};
+    try { debug = header ? JSON.parse(header) : {}; } catch (_) { /* Header may not be exposed by CORS. */ }
+    if (typeof debug?.response_id === 'string') taskMeta.responseId = debug.response_id;
+  }
+
+  async function readPayload(response, taskMeta) {
+    readDebugHeader(response, taskMeta);
+    const raw = await response.text();
+    recordApiLog({
+      type: 'response',
+      endpoint: response.url || '',
+      httpStatus: response.status,
+      statusText: response.statusText || '',
+      headers: safeResponseHeaders(response),
+      body: raw
+    });
+    let payload = null;
+    try { payload = raw ? JSON.parse(raw) : {}; } catch (_) {
+      const error = new Error(`2Captcha вернул неожиданный ответ (HTTP ${response.status}): ${raw.slice(0, 300)}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+
+    if (payload?.response_id && !taskMeta.responseId) taskMeta.responseId = String(payload.response_id);
+    if (response.status === 202 || response.status === 408 || payload?.status === 'pending') {
+      return { pending: true, payload };
+    }
+    if (!response.ok) {
+      const retryAfter = response.headers?.get?.('Retry-After');
+      const message = payload?.error || payload?.message || `HTTP ${response.status}`;
+      const error = new Error(response.status === 503
+        ? `2Captcha временно перегружен${retryAfter ? `; повторите не раньше чем через ${retryAfter} сек.` : ''}: ${message}`
+        : `Ошибка 2Captcha: ${message}`);
+      error.taskMeta = taskMeta;
+      error.httpStatus = response.status;
+      throw error;
+    }
+    if (payload?.status === 'error') {
+      const error = new Error(`Ошибка Google Search API: ${payload.error || 'неизвестная ошибка'}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+    if (!['success', 'no_results'].includes(payload?.status)) {
+      const error = new Error(`Неожиданный статус 2Captcha: ${payload?.status || 'отсутствует'}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+    return { pending: false, payload };
+  }
+
+  async function performTask(taskSpec) {
+    const taskMeta = makeTaskMeta(taskSpec);
+    taskMetas.push(taskMeta);
+    const body = {
+      task_type: 'google_search',
+      url: taskSpec.url,
+      format: 'json',
+      data_format: 'json',
+      timeout: 120,
+      with_ai: false
+    };
+    // One google_search task can return all selected pages (1–10) via page_num.
+    if (Number.isInteger(taskSpec.pageNum)) body.page_num = taskSpec.pageNum;
+    if (taskSpec.withHtml) body.with_html = true;
+
+    const requestUrl = 'https://scraper.2captcha.com/tasks/sync';
+    const requestOptions = {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(body)
+    };
+    recordApiLog({
+      type: 'request',
+      endpoint: requestUrl,
+      method: 'POST',
+      headers: { Authorization: 'Bearer [REDACTED]', 'Content-Type': 'application/json', Accept: 'application/json' },
+      body,
+      requestedPageRange: { from: taskSpec.pageStart, to: taskMeta.apiPageEnd },
+      includedPageRange: { from: taskSpec.pageStart, to: taskSpec.pageEnd }
+    });
+    let response;
+    try {
+      response = await fetch(requestUrl, requestOptions);
+    } catch (cause) {
+      recordApiLog({ type: 'network_error', endpoint: requestUrl, method: 'POST', message: cause?.message || String(cause) });
+      const error = new Error(`Не удалось связаться с 2Captcha: ${cause?.message || String(cause)}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+
+    let result = await readPayload(response, taskMeta);
+    // A synchronous 408 means the same task is pending. Poll its response_id;
+    // do not create duplicate Google Search tasks.
+    if (result.pending) {
+      if (!taskMeta.responseId) {
+        const error = new Error('2Captcha оставил задание в ожидании, но не вернул response_id для получения результата.');
+        error.taskMeta = taskMeta;
+        throw error;
+      }
+      let completed = false;
+      for (let attempt = 0; attempt < 40; attempt++) {
+        if (typeof stopRequested !== 'undefined' && stopRequested) break;
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const pollUrl = `https://scraper.2captcha.com/tasks/result/${encodeURIComponent(taskMeta.responseId)}`;
+        recordApiLog({ type: 'request', endpoint: pollUrl, method: 'GET', headers: { Accept: 'application/json' } });
+        let pollResponse;
+        try {
+          pollResponse = await fetch(pollUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
+        } catch (cause) {
+          recordApiLog({ type: 'network_error', endpoint: pollUrl, method: 'GET', message: cause?.message || String(cause) });
+          const error = new Error(`Не удалось получить результат задания 2Captcha: ${cause?.message || String(cause)}`);
+          error.taskMeta = taskMeta;
+          throw error;
+        }
+        result = await readPayload(pollResponse, taskMeta);
+        if (!result.pending) {
+          completed = true;
+          break;
+        }
+      }
+      if (!completed) {
+        const error = new Error('Задание 2Captcha всё ещё выполняется или мониторинг остановлен; результат не получен.');
+        error.taskMeta = taskMeta;
+        throw error;
+      }
+    }
+
+    const payload = result.payload;
+    const actualPages = Number(payload?.task_param?.pages);
+    taskMeta.serverPages = Number.isInteger(actualPages) && actualPages > 0 ? actualPages : null;
+    taskMeta.serverTaskUrl = typeof payload?.task_param?.url === 'string' ? payload.task_param.url : '';
+    taskMeta.status = String(payload?.status || '');
+    taskMeta.htmlPagesReceived = Array.isArray(payload?.html) ? payload.html.filter((item) => {
+      if (typeof item === 'string') return item.trim().length > 0;
+      return Boolean(item && typeof item === 'object' && String(item.html || item.body || item.content || '').trim());
+    }).length : 0;
+    return { payload, taskMeta };
+  }
+
+  function pageFromItems(pageNumber, items, payload, pageBaseUrl) {
+    const pageUrl = new URL(pageBaseUrl.toString());
+    pageUrl.searchParams.set('start', String((pageNumber - 1) * 10));
+    const results = items.map(({ _position, ...item }) => item)
+      .filter((item) => item.url && /^https?:\/\//i.test(item.url));
+    return {
+      blocked: false,
+      title: `Google Search via 2Captcha · страница ${pageNumber}`,
+      url: pageUrl.toString(),
+      pageLanguage: pageBaseUrl.searchParams.get('hl') || '',
+      searchParams: {
+        hl: pageBaseUrl.searchParams.get('hl') || '',
+        gl: pageBaseUrl.searchParams.get('gl') || '',
+        lr: pageBaseUrl.searchParams.get('lr') || '',
+        filter: '',
+        tbs: pageBaseUrl.searchParams.get('tbs') || ''
+      },
+      results,
+      nextUrl: null,
+      totalText: `Страница ${pageNumber}${Number(payload?.results) >= 0 ? ` · оценка Google: ${payload.results}` : ''}`,
+      realLocation: payload?.real_location || ''
+    };
+  }
+
+  function addStructuredPages(payload, pageBaseUrl, pageStart, pageEnd) {
+    const items = Array.isArray(payload?.groups?.organic?.items) ? payload.groups.organic.items : [];
+    const grouped = new Map();
+    items.forEach((item, index) => {
+      const absolutePosition = Number(item?.position || 0);
+      const pagePosition = Number(item?.page_position?.position || 0);
+      const rawPage = Number(item?.page_position?.page);
+      // The API documents page_position.page and position as absolute when
+      // start is used. Do not silently re-label page 1 as page 3 if the worker
+      // ignores the requested offset.
+      const calculatedPage = absolutePosition > 0 ? Math.ceil(absolutePosition / 10) : 0;
+      const pageNumber = Number.isInteger(rawPage) && rawPage >= 1
+        ? rawPage
+        : (calculatedPage || pageStart);
+      if (pageNumber < pageStart || pageNumber > pageEnd) return;
+      if (!grouped.has(pageNumber)) grouped.set(pageNumber, []);
+      grouped.get(pageNumber).push({
+        title: String(item?.title || ''),
+        url: String(item?.url || ''),
+        snippet: String(item?.description || ''),
+        displayUrl: (() => { try { return new URL(item.url).hostname; } catch (_) { return ''; } })(),
+        _position: pagePosition || (absolutePosition > 0 ? ((absolutePosition - 1) % 10) + 1 : index + 1)
+      });
+    });
+
+    for (const [pageNumber, pageItems] of grouped.entries()) {
+      pageItems.sort((a, b) => a._position - b._position);
+      const existing = pagesByNumber.get(pageNumber);
+      pagesByNumber.set(pageNumber, pageFromItems(pageNumber, [...(existing?.results || []), ...pageItems], payload, pageBaseUrl));
+    }
+    return grouped.size;
+  }
+
+  function htmlEntryParts(entry, index, pageStart) {
+    if (typeof entry === 'string') return { pageNumber: pageStart + index, html: entry };
+    if (!entry || typeof entry !== 'object') return { pageNumber: pageStart + index, html: '' };
+    const pageValue = Number(entry.page || entry.page_num || entry.page_number || entry.page_position?.page);
+    return {
+      pageNumber: Number.isInteger(pageValue) && pageValue > 0 ? pageValue : pageStart + index,
+      html: String(entry.html || entry.body || entry.content || entry.raw || '')
+    };
+  }
+
+  function extractResultsFromHtml(html, pageNumber, pageBaseUrl) {
+    if (typeof DOMParser === 'undefined' || !html) return [];
+    let documentFromHtml;
+    try { documentFromHtml = new DOMParser().parseFromString(html, 'text/html'); }
+    catch (_) { return []; }
+    const root = documentFromHtml.querySelector('#rso') || documentFromHtml.querySelector('#search') || documentFromHtml;
+    const headings = [...root.querySelectorAll('h3')];
+    const results = [];
+    const seenUrls = new Set();
+    const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+    for (const heading of headings) {
+      const anchor = heading.closest('a[href]') || heading.querySelector('a[href]');
+      if (!anchor) continue;
+      let target;
+      try { target = new URL(anchor.getAttribute('href') || anchor.href, pageBaseUrl); } catch (_) { continue; }
+      if (!/^https?:$/.test(target.protocol)) continue;
+      if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && target.pathname === '/url') {
+        const destination = target.searchParams.get('q') || target.searchParams.get('url');
+        if (destination && /^https?:\/\//i.test(destination)) {
+          try { target = new URL(destination); } catch (_) { /* Keep the Google redirect. */ }
+        }
+      }
+      if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && /\/(search|preferences|aclk|sorry)(\/|\?|$)/i.test(target.pathname)) continue;
+      if (target.hostname === 'translate.google.com' || target.hostname.endsWith('.googleusercontent.com')) continue;
+      if (seenUrls.has(target.href)) continue;
+      seenUrls.add(target.href);
+      const block = heading.closest('.MjjYud, .g, [data-sokoban-container]') || anchor.closest('.MjjYud, .g, [data-sokoban-container]') || heading.parentElement;
+      const snippetNode = block?.querySelector?.('.VwiC3b, .yXK7lf, .GI74Re, .ITZIwc, .IsZvec, [data-sncf], .aCOpRe');
+      const snippet = clean(snippetNode?.innerText || snippetNode?.textContent || '');
+      const cite = block?.querySelector?.('cite');
+      results.push({
+        title: clean(heading.innerText || heading.textContent),
+        url: target.href,
+        snippet: snippet.slice(0, 1800),
+        displayUrl: clean(cite?.innerText || cite?.textContent || target.hostname),
+        _position: results.length + 1
+      });
+    }
+    return results;
+  }
+
+  function mergeHtmlPage(pageNumber, htmlResults, payload, pageBaseUrl, htmlWasReceived) {
+    const existing = pagesByNumber.get(pageNumber);
+    const combined = [];
+    const seenUrls = new Set();
+    const seenTitles = new Set();
+    for (const item of [...(existing?.results || []), ...htmlResults]) {
+      const urlKey = String(item.url || '').trim().toLowerCase();
+      const titleKey = String(item.title || '').trim().toLowerCase();
+      if ((urlKey && seenUrls.has(urlKey)) || (titleKey && seenTitles.has(titleKey))) continue;
+      if (urlKey) seenUrls.add(urlKey);
+      if (titleKey) seenTitles.add(titleKey);
+      combined.push({ ...item, _position: combined.length + 1 });
+    }
+    if (existing || htmlWasReceived) {
+      pagesByNumber.set(pageNumber, pageFromItems(pageNumber, combined, payload, pageBaseUrl));
+    }
+  }
+
+  // 2Captcha google_search can return 1–10 pages in one task via page_num.
+  // Use the base Google URL (without start) so one query creates one billable task.
+  const taskPlan = [{
+    pageStart: 1,
+    pageEnd: maxPages,
+    apiPageEnd: maxPages,
+    url: baseSearchUrl.toString(),
+    pageNum: maxPages,
+    withHtml: maxPages > 1
+  }];
+
+  const errors = [];
+  for (let taskIndex = 0; taskIndex < taskPlan.length; taskIndex++) {
+    if (typeof stopRequested !== 'undefined' && stopRequested) break;
+    if (taskIndex > 0) {
+      // Keep API traffic sequential and spaced; never submit page-range jobs in parallel.
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      if (typeof stopRequested !== 'undefined' && stopRequested) break;
+    }
+    const taskSpec = { ...taskPlan[taskIndex], withHtml: maxPages > 1 };
+    let payload;
+    let taskMeta;
+    try {
+      const taskResult = await performTask(taskSpec);
+      payload = taskResult.payload;
+      taskMeta = taskResult.taskMeta;
+    } catch (error) {
+      taskMeta = error.taskMeta || taskMetas[taskMetas.length - 1];
+      if (taskMeta) taskMeta.error = error.message || String(error);
+      errors.push({ pageStart: taskSpec.pageStart, pageEnd: taskSpec.pageEnd, message: error.message || String(error) });
+      continue;
+    }
+
+    const rangePagesBefore = new Set([...pagesByNumber.keys()].filter((page) => page >= taskSpec.pageStart && page <= taskSpec.pageEnd));
+    taskMeta.structuredPagesReceived = addStructuredPages(payload, baseSearchUrl, taskSpec.pageStart, taskSpec.pageEnd);
+    const rawHtmlPages = Array.isArray(payload?.html) ? payload.html : [];
+    rawHtmlPages.forEach((entry, index) => {
+      const { pageNumber, html } = htmlEntryParts(entry, index, taskSpec.pageStart);
+      if (!html || pageNumber < taskSpec.pageStart || pageNumber > taskSpec.pageEnd) return;
+      taskMeta.htmlPagesParsed++;
+      const htmlResults = extractResultsFromHtml(html, pageNumber, baseSearchUrl);
+      if (htmlResults.length) taskMeta.htmlPagesWithResults++;
+      mergeHtmlPage(pageNumber, htmlResults, payload, baseSearchUrl, true);
+    });
+    taskMeta.pagesAssembled = [...pagesByNumber.keys()].filter((page) => page >= taskSpec.pageStart && page <= taskSpec.pageEnd).length;
+    taskMeta.newPagesAssembled = taskMeta.pagesAssembled - rangePagesBefore.size;
+  }
+
+  const pages = [...pagesByNumber.entries()]
+    .sort(([pageA], [pageB]) => pageA - pageB)
+    .map(([, page]) => page);
+  const pagesWithResults = pages.filter((page) => page.results.length).length;
+  const resultsReceived = pages.reduce((sum, page) => sum + page.results.length, 0);
+  const missingPages = [];
+  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+    if (!pagesByNumber.has(pageNumber)) missingPages.push(pageNumber);
+  }
+
+  return {
+    pages,
+    tasks: taskMetas,
+    requestedPages: maxPages,
+    pagesReceived: pages.length,
+    pagesWithResults,
+    resultsReceived,
+    structuredPagesReceived: taskMetas.reduce((sum, task) => sum + task.structuredPagesReceived, 0),
+    htmlPagesReceived: taskMetas.reduce((sum, task) => sum + task.htmlPagesReceived, 0),
+    htmlPagesParsed: taskMetas.reduce((sum, task) => sum + task.htmlPagesParsed, 0),
+    htmlPagesWithResults: taskMetas.reduce((sum, task) => sum + task.htmlPagesWithResults, 0),
+    servicePages: taskMetas.reduce((sum, task) => sum + (task.serverPages || 0), 0) || null,
+    missingPages,
+    errors
+  };
+}
+
+async function searchGoogleVia2CaptchaScrape(url, apiKey, maxPages, apiLog = []) {
+  const baseSearchUrl = new URL(url);
+  baseSearchUrl.searchParams.delete('start');
+  baseSearchUrl.searchParams.delete('num');
+  const taskMetas = [];
+  const pages = [];
+  const errors = [];
+  let googleBlocked = false;
+
+  function redactApiLogValue(value, propertyName = '') {
+    if (/authorization/i.test(propertyName)) return 'Bearer [REDACTED]';
+    if (/api.?key|token|secret|password/i.test(propertyName)) return '[REDACTED]';
+    if (Array.isArray(value)) return value.map((item) => redactApiLogValue(item));
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, redactApiLogValue(item, key)]));
+    }
+    if (typeof value === 'string') {
+      let safe = value;
+      if (apiKey) safe = safe.split(apiKey).join('[REDACTED_API_KEY]');
+      return safe.replace(/Bearer\s+[^\s"']+/gi, 'Bearer [REDACTED]');
+    }
+    return value;
+  }
+
+  function recordApiLog(entry) {
+    if (Array.isArray(apiLog)) apiLog.push(redactApiLogValue({ timestamp: new Date().toISOString(), ...entry }));
+  }
+
+  function safeResponseHeaders(response) {
+    const headers = {};
+    for (const name of ['content-type', 'retry-after', 'x-debug', 'x-debug_response', 'date', 'request-id', 'x-request-id']) {
+      const value = response.headers?.get?.(name);
+      if (value) headers[name] = value;
+    }
+    return headers;
+  }
+
+  function createTaskMeta(pageNumber, pageUrl) {
+    return {
+      taskType: 'scrape',
+      url: pageUrl.toString(),
+      startedAt: new Date().toISOString(),
+      responseId: '',
+      pageStart: pageNumber,
+      pageEnd: pageNumber,
+      apiPageEnd: pageNumber,
+      pagesRequested: 1,
+      selectedPagesRequested: 1,
+      pageParameter: pageNumber === 1 ? 'без start (первая страница)' : `start=${(pageNumber - 1) * 10}`,
+      pageNum: null,
+      withHtml: true,
+      serverPages: 1,
+      htmlPagesReceived: 0,
+      htmlPagesParsed: 0,
+      htmlPagesWithResults: 0,
+      structuredPagesReceived: 0,
+      pagesAssembled: 0,
+      status: '',
+      targetHttpCode: null,
+      error: ''
+    };
+  }
+
+  function getResponseId(response, payload, taskMeta) {
+    if (taskMeta.responseId) return;
+    try {
+      const debug = JSON.parse(response.headers?.get?.('x-debug') || '{}');
+      if (typeof debug.response_id === 'string') taskMeta.responseId = debug.response_id;
+    } catch (_) { /* CORS may hide the diagnostic header. */ }
+    if (!taskMeta.responseId && typeof payload?.response_id === 'string') taskMeta.responseId = payload.response_id;
+  }
+
+  async function readApiResponse(response, taskMeta, endpoint) {
+    const raw = await response.text();
+    recordApiLog({
+      type: 'response', endpoint,
+      httpStatus: response.status,
+      statusText: response.statusText || '',
+      headers: safeResponseHeaders(response),
+      body: raw
+    });
+    let payload;
+    try { payload = raw ? JSON.parse(raw) : {}; }
+    catch (_) {
+      const error = new Error(`2Captcha вернул не JSON для Scrape (HTTP ${response.status}): ${raw.slice(0, 300)}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+    getResponseId(response, payload, taskMeta);
+    if (response.status === 202 || response.status === 408 || payload?.status === 'pending') {
+      return { pending: true, payload };
+    }
+    if (!response.ok) {
+      const retryAfter = response.headers?.get?.('Retry-After');
+      const message = payload?.error || payload?.message || `HTTP ${response.status}`;
+      const error = new Error(response.status === 503
+        ? `2Captcha временно перегружен${retryAfter ? `; повторите не раньше чем через ${retryAfter} сек.` : ''}: ${message}`
+        : `Ошибка 2Captcha Scrape: ${message}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+    if (payload?.status === 'error') {
+      const error = new Error(`Scrape не смог загрузить страницу: ${payload.error || 'неизвестная ошибка'}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+    if (!['success', 'warn'].includes(payload?.status)) {
+      const error = new Error(`Неожиданный статус 2Captcha Scrape: ${payload?.status || 'отсутствует'}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+    return { pending: false, payload };
+  }
+
+  async function performScrape(pageNumber, pageUrl, taskMeta) {
+    const endpoint = '/tasks/sync';
+    const requestUrl = `https://scraper.2captcha.com${endpoint}`;
+    const body = {
+      task_type: 'scrape',
+      url: pageUrl.toString(),
+      data_format: 'raw',
+      format: 'json',
+      timeout: 120
+    };
+    recordApiLog({
+      type: 'request', endpoint: requestUrl, method: 'POST',
+      headers: { Authorization: 'Bearer [REDACTED]', 'Content-Type': 'application/json', Accept: 'application/json' },
+      body,
+      requestedPageRange: { from: pageNumber, to: pageNumber }
+    });
+    let response;
+    try {
+      response = await fetch(requestUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } catch (cause) {
+      recordApiLog({ type: 'network_error', endpoint: requestUrl, method: 'POST', message: cause?.message || String(cause) });
+      const error = new Error(`Не удалось связаться с 2Captcha Scrape: ${cause?.message || String(cause)}`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+
+    let result = await readApiResponse(response, taskMeta, requestUrl);
+    if (result.pending) {
+      if (!taskMeta.responseId) {
+        const error = new Error('Задание Scrape ожидает выполнения, но 2Captcha не вернул response_id.');
+        error.taskMeta = taskMeta;
+        throw error;
+      }
+      let completed = false;
+      for (let attempt = 0; attempt < 40; attempt++) {
+        if (typeof stopRequested !== 'undefined' && stopRequested) break;
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const pollUrl = `https://scraper.2captcha.com/tasks/result/${encodeURIComponent(taskMeta.responseId)}`;
+        recordApiLog({ type: 'request', endpoint: pollUrl, method: 'GET', headers: { Accept: 'application/json' } });
+        let pollResponse;
+        try {
+          pollResponse = await fetch(pollUrl, { method: 'GET', headers: { Accept: 'application/json' } });
+        } catch (cause) {
+          recordApiLog({ type: 'network_error', endpoint: pollUrl, method: 'GET', message: cause?.message || String(cause) });
+          const error = new Error(`Не удалось получить результат Scrape: ${cause?.message || String(cause)}`);
+          error.taskMeta = taskMeta;
+          throw error;
+        }
+        result = await readApiResponse(pollResponse, taskMeta, pollUrl);
+        if (!result.pending) { completed = true; break; }
+      }
+      if (!completed) {
+        const error = new Error('Задание Scrape ещё выполняется или мониторинг остановлен; результат не получен.');
+        error.taskMeta = taskMeta;
+        throw error;
+      }
+    }
+    const payload = result.payload;
+    taskMeta.status = String(payload.status || '');
+    taskMeta.targetHttpCode = Number.isFinite(Number(payload.http_code)) ? Number(payload.http_code) : null;
+    const html = typeof payload.body === 'string' ? payload.body : '';
+    if (!html.trim()) {
+      const error = new Error(`Scrape страницы ${pageNumber} вернул пустое поле body.`);
+      error.taskMeta = taskMeta;
+      throw error;
+    }
+    taskMeta.htmlPagesReceived = 1;
+    return { payload, html };
+  }
+
+  function extractResultsFromHtml(html, pageUrl) {
+    if (typeof DOMParser === 'undefined' || !html) return { results: [], blockedReason: '' };
+    let doc;
+    try { doc = new DOMParser().parseFromString(html, 'text/html'); }
+    catch (_) { return { results: [], blockedReason: '' }; }
+    const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    // Google includes CAPTCHA-related feature code on ordinary result pages
+    // (for example `hasCaptchaSupport=true` and generic `/sorry/index` handlers).
+    // Never scan the full HTML/script text for these words: inspect only visible
+    // page text and concrete challenge elements instead.
+    const visibleBody = doc.body?.cloneNode?.(true);
+    visibleBody?.querySelectorAll?.('script, style, noscript, svg, template').forEach((node) => node.remove());
+    const pageText = clean(visibleBody?.innerText || visibleBody?.textContent || doc.body?.innerText || '');
+    const captchaPattern = /our systems have detected unusual traffic|unusual traffic from your computer network|automated queries|please verify (?:that )?you are (?:not a robot|human)|to continue, please type the characters/i;
+    const challengeElement = doc.querySelector('form#captcha-form, form[action*="/sorry/index"], iframe[src*="recaptcha"], #recaptcha');
+    if (captchaPattern.test(pageText) || challengeElement) {
+      return { results: [], blockedReason: 'Google показал CAPTCHA или ограничение автоматических запросов.' };
+    }
+    if (/before you continue to google|before you proceed|прежде чем продолжить/i.test(pageText) && !doc.querySelector('#search')) {
+      return { results: [], blockedReason: 'Google показал страницу согласия с условиями/cookie вместо выдачи.' };
+    }
+    const root = doc.querySelector('#rso') || doc.querySelector('#search') || doc;
+    const headings = [...(root.querySelectorAll?.('h3') || [])];
+    const results = [];
+    const seenUrls = new Set();
+    for (const heading of headings) {
+      const anchor = heading.closest('a[href]') || heading.querySelector('a[href]');
+      if (!anchor) continue;
+      let target;
+      try { target = new URL(anchor.getAttribute('href') || anchor.href, pageUrl); } catch (_) { continue; }
+      if (!/^https?:$/.test(target.protocol)) continue;
+      if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && target.pathname === '/url') {
+        const destination = target.searchParams.get('q') || target.searchParams.get('url');
+        if (destination && /^https?:\/\//i.test(destination)) {
+          try { target = new URL(destination); } catch (_) { /* Keep original URL. */ }
+        }
+      }
+      if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && /\/(search|preferences|aclk|sorry)(\/|\?|$)/i.test(target.pathname)) continue;
+      if (target.hostname === 'translate.google.com' || target.hostname.endsWith('.googleusercontent.com')) continue;
+      if (seenUrls.has(target.href)) continue;
+      seenUrls.add(target.href);
+      const block = heading.closest('.MjjYud, .g, [data-sokoban-container]') || anchor.closest('.MjjYud, .g, [data-sokoban-container]') || heading.parentElement;
+      const snippetNode = block?.querySelector?.('.VwiC3b, .yXK7lf, .GI74Re, .ITZIwc, .IsZvec, [data-sncf], .aCOpRe');
+      const cite = block?.querySelector?.('cite');
+      results.push({
+        title: clean(heading.innerText || heading.textContent),
+        url: target.href,
+        snippet: clean(snippetNode?.innerText || snippetNode?.textContent || '').slice(0, 1800),
+        displayUrl: clean(cite?.innerText || cite?.textContent || target.hostname),
+        _position: results.length + 1
+      });
+    }
+    return { results, blockedReason: '' };
+  }
+
+  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+    if (typeof stopRequested !== 'undefined' && stopRequested) break;
+    if (pageNumber > 1) {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      if (typeof stopRequested !== 'undefined' && stopRequested) break;
+    }
+    const pageUrl = new URL(baseSearchUrl.toString());
+    if (pageNumber > 1) pageUrl.searchParams.set('start', String((pageNumber - 1) * 10));
+    const taskMeta = createTaskMeta(pageNumber, pageUrl);
+    taskMetas.push(taskMeta);
+    try {
+      const { payload, html } = await performScrape(pageNumber, pageUrl, taskMeta);
+      if (taskMeta.targetHttpCode !== null && (taskMeta.targetHttpCode < 200 || taskMeta.targetHttpCode >= 400)) {
+        const message = `Google ответил HTTP ${taskMeta.targetHttpCode} на странице ${pageNumber}.`;
+        taskMeta.error = message;
+        errors.push({ pageStart: pageNumber, pageEnd: pageNumber, message });
+        if ([403, 429].includes(taskMeta.targetHttpCode)) googleBlocked = true;
+        if (googleBlocked) break;
+        continue;
+      }
+      taskMeta.htmlPagesParsed = 1;
+      const parsed = extractResultsFromHtml(html, pageUrl);
+      if (parsed.blockedReason) {
+        taskMeta.error = parsed.blockedReason;
+        errors.push({ pageStart: pageNumber, pageEnd: pageNumber, message: parsed.blockedReason });
+        googleBlocked = true;
+        break;
+      }
+      taskMeta.htmlPagesWithResults = parsed.results.length ? 1 : 0;
+      taskMeta.pagesAssembled = 1;
+      const resultItems = parsed.results.map(({ _position, ...item }) => item);
+      pages.push({
+        blocked: false,
+        title: `Google Scrape · страница ${pageNumber}`,
+        url: pageUrl.toString(),
+        pageLanguage: pageUrl.searchParams.get('hl') || '',
+        searchParams: {
+          hl: pageUrl.searchParams.get('hl') || '',
+          gl: pageUrl.searchParams.get('gl') || '',
+          lr: pageUrl.searchParams.get('lr') || '',
+          filter: pageUrl.searchParams.get('filter') || '',
+          tbs: pageUrl.searchParams.get('tbs') || ''
+        },
+        results: resultItems,
+        nextUrl: null,
+        totalText: `HTML получен через Scrape · HTTP ${taskMeta.targetHttpCode ?? '—'}${payload.status === 'warn' && payload.warning ? ` · ${payload.warning}` : ''}`,
+        realLocation: ''
+      });
+    } catch (error) {
+      taskMeta.error = error.message || String(error);
+      errors.push({ pageStart: pageNumber, pageEnd: pageNumber, message: taskMeta.error });
+      if (error.taskMeta && error.taskMeta !== taskMeta) Object.assign(taskMeta, error.taskMeta);
+      if (/CAPTCHA|unusual traffic|automated queries|HTTP (403|429)/i.test(taskMeta.error)) googleBlocked = true;
+      if (googleBlocked) break;
+    }
+  }
+
+  const receivedPageNumbers = new Set(pages.map((page) => Math.floor(Number(new URL(page.url).searchParams.get('start') || 0) / 10) + 1));
+  const missingPages = [];
+  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+    if (!receivedPageNumbers.has(pageNumber)) missingPages.push(pageNumber);
+  }
+  const pagesWithResults = pages.filter((page) => page.results.length).length;
+  const resultsReceived = pages.reduce((sum, page) => sum + page.results.length, 0);
+  return {
+    pages,
+    tasks: taskMetas,
+    requestedPages: maxPages,
+    pagesReceived: pages.length,
+    pagesWithResults,
+    resultsReceived,
+    structuredPagesReceived: 0,
+    htmlPagesReceived: taskMetas.reduce((sum, task) => sum + task.htmlPagesReceived, 0),
+    htmlPagesParsed: taskMetas.reduce((sum, task) => sum + task.htmlPagesParsed, 0),
+    htmlPagesWithResults: taskMetas.reduce((sum, task) => sum + task.htmlPagesWithResults, 0),
+    servicePages: pages.length,
+    missingPages,
+    errors,
+    googleBlocked
+  };
+}
+
 $('stop-monitor').addEventListener('click', () => {
   if (!isRunning || stopRequested) return;
   stopRequested = true;
@@ -1243,6 +2216,17 @@ $('run-report').addEventListener('click', async () => {
   const periodLabel = $('period').selectedOptions[0].textContent;
   const googleSearchMinIntervalSeconds = normalizeGoogleSearchMinInterval($('google-search-min-interval-seconds').value);
   $('google-search-min-interval-seconds').value = String(googleSearchMinIntervalSeconds);
+  const selectedBackend = $('search-backend').value;
+  const searchBackend = ['2captcha', '2captcha-scrape'].includes(selectedBackend) ? selectedBackend : 'browser';
+  const isTwoCaptchaBackend = searchBackend.startsWith('2captcha');
+  const isTwoCaptchaScrape = searchBackend === '2captcha-scrape';
+  const apiSettings = await chrome.storage.local.get({ [TWO_CAPTCHA_KEY_SETTING]: '' });
+  const twoCaptchaApiKey = String(apiSettings[TWO_CAPTCHA_KEY_SETTING] || $('two-captcha-api-key').value || '').trim();
+  if (isTwoCaptchaBackend && !twoCaptchaApiKey) {
+    setStatus($('run-status'), 'Для режима 2Captcha сначала введите и сохраните API-ключ.', 'error');
+    $('two-captcha-settings').hidden = false;
+    return;
+  }
   const chatGPTFilterEnabled = $('chatgpt-region-filter-enabled').checked;
   const totalSteps = queryList.length * maxPages;
   let completedSteps = 0;
@@ -1251,9 +2235,23 @@ $('run-report').addEventListener('click', async () => {
   stopRequested = false;
   stopSignalPromise = new Promise((resolve) => { stopSignalResolver = resolve; });
   isRunning = true;
+  lastTwoCaptchaApiLog = [];
+  lastTwoCaptchaApiLogContext = isTwoCaptchaBackend ? {
+    profile: profile.name,
+    searchBackend,
+    taskType: isTwoCaptchaScrape ? 'scrape' : 'google_search',
+    selectedQueryCount: queryList.length,
+    requestedPagesPerQuery: maxPages,
+    startedAt: new Date().toISOString()
+  } : null;
+  $('download-api-log').hidden = true;
   $('run-report').disabled = true;
   $('chatgpt-region-filter-enabled').disabled = true;
   $('google-search-min-interval-seconds').disabled = true;
+  $('search-backend').disabled = true;
+  $('two-captcha-api-key').disabled = true;
+  $('save-two-captcha-key').disabled = true;
+  $('refresh-two-captcha-stats').disabled = true;
   $('chatgpt-region-reasoning-enabled').disabled = true;
   $('chatgpt-region-reasoning-effort').disabled = true;
   $('stop-monitor').disabled = true; // Enabled once the search tab is open.
@@ -1268,10 +2266,12 @@ $('run-report').addEventListener('click', async () => {
   addLog(`Выбрано запросов: ${queryList.length}.`);
   addLog(`Язык и регион передаются прямо в ссылке поиска: hl=${profile.interfaceLang || '—'}, gl=${profile.region || '—'}, lr=${profile.resultLangs || '—'}.`);
 
+  const twoCaptchaRequestMeta = [];
   const report = {
     profile: { ...profile },
     periodLabel,
     googleSearchMinIntervalSeconds,
+    searchBackend,
     createdAt: new Date().toLocaleString('ru-RU'),
     queries: [],
     selectedQueryCount: queryList.length,
@@ -1280,13 +2280,25 @@ $('run-report').addEventListener('click', async () => {
 
   try {
     await chrome.storage.local.set({ [GOOGLE_SEARCH_MIN_INTERVAL_SETTING]: googleSearchMinIntervalSeconds });
-    const tab = await chrome.tabs.create({ url: 'about:blank', active: true });
-    tabId = tab.id;
-    await activateAndFocusTab(tabId);
+    if (searchBackend === 'browser') {
+      const tab = await chrome.tabs.create({ url: 'about:blank', active: true });
+      tabId = tab.id;
+      await activateAndFocusTab(tabId);
+    }
     $('stop-monitor').disabled = false;
     setStatus($('run-status'), `Запуск: ${queryList.length} запрос(ов), до ${maxPages} страниц на запрос…`);
-    addLog(`Общий минимальный интервал Google: ${googleSearchMinIntervalSeconds} сек. (для всех запросов и страниц пагинации).`);
-    addLog('Включён показ похожих результатов Google (filter=0); параметр сохраняется при переходе между страницами.');
+    if (isTwoCaptchaBackend) {
+      if (isTwoCaptchaScrape) {
+        addLog('Источник выдачи: 2Captcha Scrape. Каждая страница Google загружается отдельным заданием с task_type=scrape; HTML разбирается внутри расширения.');
+        addLog(`Пагинация Scrape: ${maxPages} последовательных задания(й), start=${Array.from({ length: maxPages }, (_, index) => index * 10).join(', ')}. Параметры hl, gl, lr, tbs и filter=0 передаются в URL Google.`);
+      } else {
+        addLog('Источник выдачи: 2Captcha Google Search API. Поиск выполняется без открытия Google в вашем браузере.');
+        addLog(`Пагинация 2Captcha: одно задание на запрос, page_num=${maxPages}; URL без start. Регион и языковые фильтры берутся из профиля.`);
+      }
+    } else {
+      addLog(`Общий минимальный интервал Google: ${googleSearchMinIntervalSeconds} сек. (для всех запросов и страниц пагинации).`);
+      addLog('Включён показ похожих результатов Google (filter=0); параметр сохраняется при переходе между страницами.');
+    }
 
     let googleBlocked = false;
     for (let queryIndex = 0; queryIndex < queryList.length; queryIndex++) {
@@ -1296,6 +2308,82 @@ $('run-report').addEventListener('click', async () => {
       report.queries.push(queryReport);
       addLog(`Запрос ${queryIndex + 1}/${queryList.length}: ${query}`);
       let nextUrl = createSearchUrl(query, profile, period, 0);
+      if (isTwoCaptchaBackend) {
+        try {
+          const apiResult = isTwoCaptchaScrape
+            ? await searchGoogleVia2CaptchaScrape(nextUrl, twoCaptchaApiKey, maxPages, lastTwoCaptchaApiLog)
+            : await searchGoogleVia2Captcha(nextUrl, twoCaptchaApiKey, maxPages, lastTwoCaptchaApiLog);
+          twoCaptchaRequestMeta.push(...apiResult.tasks);
+          googleBlocked = googleBlocked || Boolean(apiResult.googleBlocked);
+          if (stopRequested) {
+            stoppedByUser = true;
+            addLog('Мониторинг остановлен после завершения текущего API-задания. Новые запросы не отправляются.');
+          }
+          queryReport.pages.push(...apiResult.pages);
+          queryReport.apiStats = {
+            requestedPages: maxPages,
+            pagesReceived: apiResult.pagesReceived,
+            pagesWithResults: apiResult.pagesWithResults,
+            resultsReceived: apiResult.resultsReceived,
+            htmlPagesReceived: apiResult.htmlPagesReceived,
+            htmlPagesParsed: apiResult.htmlPagesParsed,
+            structuredPagesReceived: apiResult.structuredPagesReceived,
+            missingPages: [...apiResult.missingPages],
+            tasks: apiResult.tasks.map((task) => ({
+              pageStart: task.pageStart,
+              pageEnd: task.pageEnd,
+              apiPageEnd: task.apiPageEnd,
+              pagesRequested: task.pagesRequested,
+              selectedPagesRequested: task.selectedPagesRequested,
+              pageParameter: task.pageParameter,
+              pageNum: task.pageNum,
+              responseId: task.responseId,
+              status: task.status,
+              htmlPagesReceived: task.htmlPagesReceived,
+              htmlPagesParsed: task.htmlPagesParsed,
+              structuredPagesReceived: task.structuredPagesReceived,
+              error: task.error || ''
+            }))
+          };
+          if (apiResult.errors.length) {
+            queryReport.error = apiResult.errors.map((item) => `Страницы ${item.pageStart}${item.pageEnd !== item.pageStart ? `–${item.pageEnd}` : ''}: ${item.message}`).join('; ');
+          }
+          if (apiResult.missingPages.length) {
+            queryReport.error = [queryReport.error, `2Captcha не вернул страницы: ${apiResult.missingPages.join(', ')}.`].filter(Boolean).join(' ');
+          }
+          completedSteps += maxPages;
+          $('progress-bar').style.width = `${Math.min(100, completedSteps / totalSteps * 100)}%`;
+          addLog(`  Ответ API: получено HTML-документов ${apiResult.htmlPagesReceived}; обработано ${apiResult.htmlPagesParsed}; страниц с результатами ${apiResult.pagesWithResults}; структурированных страниц ${apiResult.structuredPagesReceived}.`);
+          for (const task of apiResult.tasks) {
+            const rangeLabel = task.pageStart === task.pageEnd ? `страница ${task.pageStart}` : `страницы ${task.pageStart}–${task.pageEnd}`;
+            const parameterLabel = isTwoCaptchaScrape
+              ? (task.pageParameter || 'scrape URL')
+              : (task.pageNum === null ? 'start=10 без page_num' : `${task.pageStart > 1 ? `start=${(task.pageStart - 1) * 10}, ` : ''}page_num=${task.pageNum}`);
+            const apiRangeNote = task.apiPageEnd > task.pageEnd ? `; API-диапазон ${task.pageStart}–${task.apiPageEnd}, в отчёт включается до ${task.pageEnd}` : '';
+            addLog(`  API-задание: ${rangeLabel}; ${parameterLabel}${apiRangeNote}; статус ${task.status || 'ошибка'}; HTML ${task.htmlPagesReceived}; структурированных страниц ${task.structuredPagesReceived}${task.responseId ? `; response_id=${task.responseId}` : ''}${task.error ? `; ошибка: ${task.error}` : ''}.`);
+          }
+          if (!apiResult.pages.length) {
+            addLog('  2Captcha не вернул страниц с органическими результатами.');
+          } else {
+            for (const page of apiResult.pages) {
+              const pageNumber = Number(new URL(page.url).searchParams.get('start') || 0) / 10 + 1;
+              addLog(`  Страница ${pageNumber}: найдено результатов — ${page.results.length}`);
+            }
+          }
+          if (apiResult.missingPages.length) {
+            addLog(`  В ответе отсутствуют страницы: ${apiResult.missingPages.join(', ')}.`);
+          }
+          addLog(`  Всего API-заданий для запроса: ${apiResult.tasks.length}; получено страниц: ${apiResult.pagesReceived}/${maxPages}; органических ссылок: ${apiResult.resultsReceived}.`);
+        } catch (error) {
+          if (error.taskMeta) twoCaptchaRequestMeta.push(error.taskMeta);
+          queryReport.error = error.message || String(error);
+          addLog(`Ошибка: ${queryReport.error}`);
+          if (/CAPTCHA|automated|blocked|unusual traffic/i.test(queryReport.error)) googleBlocked = true;
+        }
+        if (googleBlocked) break;
+        continue;
+      }
+
       const visited = new Set();
       for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
         if (stopRequested) { stoppedByUser = true; break; }
@@ -1343,12 +2431,50 @@ $('run-report').addEventListener('click', async () => {
     report.stoppedByUser = stoppedByUser;
     report.googleBlocked = googleBlocked;
     $('stop-monitor').disabled = true;
+    if (isTwoCaptchaBackend) {
+      addLog(`Завершено API-заданий: ${twoCaptchaRequestMeta.length}.`);
+    }
     if (chatGPTFilterEnabled) {
       addLog('Сбор Google завершён. Перед созданием HTML-отчёта проверяю региональную принадлежность СМИ через ChatGPT.');
       report.mediaFilter = await filterReportLinksByRegionWithChatGPT(report, profile);
     } else {
       addLog('Сбор Google завершён. Проверка региональности через ChatGPT отключена пользователем; все результаты включаются в отчёт.');
       report.mediaFilter = { status: 'disabled', checkedLinks: 0, excludedUniqueLinks: 0, excludedResultEntries: 0, error: '' };
+    }
+    if (isTwoCaptchaBackend) {
+      const previousStatsRecord = await chrome.storage.local.get({ twoCaptchaLastReportStats: null });
+      const uniqueReportTasks = new Map();
+      twoCaptchaRequestMeta.forEach((task) => {
+        const responseId = String(task?.responseId || '').trim();
+        const taskType = task?.taskType || (isTwoCaptchaScrape ? 'scrape' : 'google_search');
+        if (responseId) uniqueReportTasks.set(`${taskType}:${responseId}`, { responseId, taskType });
+      });
+      const lastReportResponseIds = [...uniqueReportTasks.values()];
+      const statsRecord = {
+        ...(previousStatsRecord.twoCaptchaLastReportStats || {}),
+        lastReportResponseIds,
+        lastReportAt: new Date().toISOString(),
+        lastReportCost: null,
+        lastReportRequests: null,
+        lastReportHistoryComplete: false
+      };
+      await chrome.storage.local.set({ twoCaptchaLastReportStats: statsRecord });
+      renderTwoCaptchaStats(statsRecord);
+      $('two-captcha-stats-updated').textContent = 'Отчёт завершён. Нажмите «Обновить статистику», чтобы подтвердить стоимость по истории 2Captcha.';
+      lastTwoCaptchaApiLogContext = {
+        ...(lastTwoCaptchaApiLogContext || {}),
+        finishedAt: new Date().toISOString(),
+        completedTasks: twoCaptchaRequestMeta.length,
+        queries: report.queries.map((item) => ({
+          query: item.query,
+          requestedPages: maxPages,
+          pagesReceived: item.pages.length,
+          pagesWithResults: item.pages.filter((page) => page.results?.length).length,
+          resultsReceived: item.pages.reduce((sum, page) => sum + (page.results?.length || 0), 0),
+          apiStats: item.apiStats || null,
+          error: item.error || ''
+        }))
+      };
     }
     const html = createReportHtml(report);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -1370,16 +2496,21 @@ $('run-report').addEventListener('click', async () => {
         : report.mediaFilter?.status === 'disabled'
           ? ' Проверка через ChatGPT отключена; все ссылки оставлены в отчёте.'
           : '';
+    const incompleteApiPages = isTwoCaptchaBackend && report.queries.some((item) => item.apiStats?.missingPages?.length);
     const reportMessage = (stoppedByUser
       ? `Остановлено. Отчёт сформирован по уже собранным результатам: ${totalResults}.`
       : googleBlocked
         ? `Google ограничил запросы. Отчёт сформирован по ранее собранным результатам: ${totalResults}.`
-        : `Готово. HTML-отчёт сформирован: ${totalResults} результатов.`) + filterMessage;
-    setStatus($('run-status'), reportMessage, (googleBlocked || report.mediaFilter?.status === 'failed') ? 'error' : 'success');
+        : `Готово. HTML-отчёт сформирован: ${totalResults} результатов.`)
+      + (incompleteApiPages ? ' 2Captcha вернул не все запрошенные страницы; номера отсутствующих страниц указаны в журнале и отчёте.' : '')
+      + filterMessage;
+    setStatus($('run-status'), reportMessage, (googleBlocked || incompleteApiPages || report.mediaFilter?.status === 'failed') ? 'error' : 'success');
+    $('download-api-log').hidden = !isTwoCaptchaBackend || lastTwoCaptchaApiLog.length === 0;
   } catch (error) {
     setStatus($('run-status'), error.message || String(error), 'error');
     addLog(error.message || String(error));
   } finally {
+    if (isTwoCaptchaBackend && lastTwoCaptchaApiLog.length) $('download-api-log').hidden = false;
     if (tabId !== null) {
       try { await chrome.tabs.remove(tabId); } catch (_) {}
     }
@@ -1390,6 +2521,10 @@ $('run-report').addEventListener('click', async () => {
     $('run-report').disabled = false;
     $('chatgpt-region-filter-enabled').disabled = false;
     $('google-search-min-interval-seconds').disabled = false;
+    $('search-backend').disabled = false;
+    $('two-captcha-api-key').disabled = false;
+    $('save-two-captcha-key').disabled = false;
+    $('refresh-two-captcha-stats').disabled = false;
     $('chatgpt-region-reasoning-enabled').disabled = false;
     $('chatgpt-region-reasoning-effort').disabled = !$('chatgpt-region-reasoning-enabled').checked;
     $('stop-monitor').disabled = true;
@@ -1885,6 +3020,7 @@ $('app-version').textContent = `v${EXTENSION_VERSION}`;
 renderInstalledReleaseNotes();
 loadRegionChatGPTFilterSetting().catch((error) => setStatus($('run-status'), `Не удалось загрузить настройку ChatGPT: ${error.message || String(error)}`, 'error'));
 loadGoogleSearchMinIntervalSetting().catch((error) => setStatus($('run-status'), `Не удалось загрузить интервал Google: ${error.message || String(error)}`, 'error'));
+loadSearchBackendSettings().catch((error) => setStatus($('run-status'), `Не удалось загрузить настройки API: ${error.message || String(error)}`, 'error'));
 loadProfiles().then(initializeGitHubFeatures).catch((error) => setStatus($('save-status'), error.message || String(error), 'error'));
 
 // Reflect a daily background sync in an already-open side panel without touching local profiles.

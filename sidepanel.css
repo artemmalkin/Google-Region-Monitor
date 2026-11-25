@@ -86,6 +86,8 @@ textarea { resize: vertical; min-height: 115px; line-height: 1.55; }
 .run-actions { display: grid; grid-template-columns: 1fr 0.72fr; gap: 8px; }
 .run-actions .button-large { min-width: 0; white-space: normal; }
 .run-actions .button-secondary:disabled { cursor: default; opacity: .5; }
+.api-log-download { margin-top: 8px; white-space: normal; }
+.api-log-download[hidden] { display: none; }
 .run-status { margin-top: 10px; color: var(--muted); font-size: 11px; }
 .progress-track { height: 5px; margin-top: 9px; overflow: hidden; border-radius: 10px; background: #edf0f3; }
 .progress-bar { width: 0; height: 100%; background: var(--blue); transition: width .2s ease; }
@@ -150,3 +152,15 @@ footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 
 .chip-remove { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; color: #174ea6; background: transparent; font-size: 14px; line-height: 1; }
 .chip-remove:hover { background: #d2e3fc; }
 .chip-empty { color: var(--muted); font-size: 12px; }
+
+
+.two-captcha-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+.two-captcha-stat { display: grid; gap: 4px; min-width: 0; }
+.two-captcha-stat span { color: var(--muted); font-size: 10px; line-height: 1.3; }
+.two-captcha-stat strong { color: var(--ink); font-size: 13px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.two-captcha-stats-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.two-captcha-stats-actions .field-help { min-width: 0; }
+.two-captcha-stats-actions .button { flex: 0 0 auto; }
+@media (max-width: 350px) { .two-captcha-stats { grid-template-columns: 1fr; } .two-captcha-stats-actions { align-items: flex-start; flex-direction: column; } }
+
+
