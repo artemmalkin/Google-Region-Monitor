@@ -16,7 +16,7 @@ function createContext() {
     storage: { onChanged: event, local: { get: async () => ({}), set: async () => {}, remove: async () => {} } },
     tabs: { onUpdated: event }
   };
-  const context = vm.createContext({ chrome, importScripts() {}, atob, TextDecoder, Uint8Array });
+  const context = vm.createContext({ chrome, importScripts() {}, atob, TextDecoder, Uint8Array, URL });
   vm.runInContext(backgroundSource, context, { filename: 'background.js' });
 
   // Load only the pure profile-normalization/merge helpers from sidepanel.js;
@@ -25,6 +25,10 @@ function createContext() {
   const end = sidepanelSource.indexOf('function getProfileByKey', start);
   assert.ok(start >= 0 && end > start, 'profile helper section should exist');
   vm.runInContext(sidepanelSource.slice(start, end), context, { filename: 'sidepanel-profile-helpers.js' });
+  const searchUrlStart = sidepanelSource.indexOf('function createSearchUrl');
+  const searchUrlEnd = sidepanelSource.indexOf('// The standalone query links', searchUrlStart);
+  assert.ok(searchUrlStart >= 0 && searchUrlEnd > searchUrlStart, 'Google search URL helper should exist');
+  vm.runInContext(sidepanelSource.slice(searchUrlStart, searchUrlEnd), context, { filename: 'sidepanel-search-url.js' });
   const writerStart = sidepanelSource.indexOf('function slugify');
   const writerEnd = sidepanelSource.indexOf('function downloadJsonFile', writerStart);
   assert.ok(writerStart >= 0 && writerEnd > writerStart, 'profile serialization helpers should exist');
@@ -154,4 +158,31 @@ test('forced sync reads through GitHub Contents API when a token exists (avoids 
 
 test('manual Check Updates forces standard profile sync', () => {
   assert.match(sidepanelSource, /const syncResult = await requestStandardSync\(!silent, true\)/);
+});
+
+
+test('standalone Google query URL applies region, interface/result languages and search period', () => {
+  const url = new URL(context.createSearchUrl('energy transition AND solar', {
+    interfaceLang: 'vi', resultLangs: 'vi, en', region: 'VN'
+  }, 'w', 0));
+
+  assert.equal(url.origin, 'https://www.google.com');
+  assert.equal(url.pathname, '/search');
+  assert.equal(url.searchParams.get('q'), 'energy transition AND solar');
+  assert.equal(url.searchParams.get('gl'), 'VN');
+  assert.equal(url.searchParams.get('hl'), 'vi');
+  assert.equal(url.searchParams.get('lr'), 'lang_vi|lang_en');
+  assert.equal(url.searchParams.get('tbs'), 'qdr:w');
+  assert.equal(url.searchParams.get('filter'), '0');
+  assert.equal(url.searchParams.has('start'), false, 'direct query link must open the first results page only');
+});
+
+test('standalone Google query URL omits period filter for all-time searches', () => {
+  const url = new URL(context.createSearchUrl('test query', {
+    interfaceLang: 'en', resultLangs: '', region: 'US'
+  }, 'all', 0));
+
+  assert.equal(url.searchParams.has('tbs'), false);
+  assert.equal(url.searchParams.has('lr'), false);
+  assert.equal(url.searchParams.has('start'), false);
 });

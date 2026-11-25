@@ -306,15 +306,125 @@ function readQueryGroupsFromEditor() {
     queries: normalizeQueries(card.querySelector('.query-group-queries')?.value || '')
   })).filter((group) => group.name || group.queries.length);
 }
+// ===== Понятный выбор языка и страны: названия вместо кодов =====
+// В профиле по-прежнему хранятся коды (hl, gl, lr), чтобы не ломать стандартные
+// профили из GitHub, экспорт/импорт и синхронизацию. Пользователь видит только
+// названия; коды подставляются в ссылку поиска автоматически.
+const GOOGLE_LANGUAGE_CODES = ('af am ar az be bg bn bs ca cs da de el en es et fa fi fr gu hi hr hu hy id is it iw ja ka kk km kn ko ky lo lt lv mk ml mn mr ms my ne nl no pa pl pt ro ru si sk sl sq sr sv sw ta te tg th tk tl tr uk ur uz vi zh-CN zh-TW').split(' ');
+const GOOGLE_REGION_CODES = ('AF AL DZ AS AD AO AI AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BM BT BO BA BW BR BN BG BF BI KH CM CA CV KY CF TD CL CN CO KM CG CD CK CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GF PF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KW KG LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MQ MR MU YT MX FM MD MC MN ME MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MK NO OM PK PW PS PA PG PY PE PH PL PT PR QA RE RO RU RW WS SM ST SA SN RS SC SL SG SK SI SB SO ZA KR SS ES LK SH VC SD SR SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UY UZ VU VE VN VI WF YE ZM ZW XK').split(' ');
+const SPECIAL_LANGUAGE_LABELS = {
+  'zh-CN': 'Китайский (упрощённый)', 'zh-TW': 'Китайский (традиционный)',
+  iw: 'Иврит — עברית', tl: 'Филиппинский (тагальский) — Tagalog', no: 'Норвежский — Norsk'
+};
+const NO_VALUE_LABEL = '— Не задавать —';
+let languageOptionsCache = null;
+let regionOptionsCache = null;
+
+function capitalizeFirst(text) { return text ? text.charAt(0).toLocaleUpperCase('ru') + text.slice(1) : text; }
+function safeDisplayName(locale, type, code) {
+  try { return new Intl.DisplayNames([locale], { type }).of(code) || ''; } catch (_) { return ''; }
+}
+function languageLabel(code) {
+  if (SPECIAL_LANGUAGE_LABELS[code]) return SPECIAL_LANGUAGE_LABELS[code];
+  const russian = capitalizeFirst(safeDisplayName('ru', 'language', code));
+  if (!russian || russian.toLowerCase() === code.toLowerCase()) return code;
+  const native = capitalizeFirst(safeDisplayName(code, 'language', code));
+  return native && native.toLowerCase() !== russian.toLowerCase() && native.toLowerCase() !== code.toLowerCase()
+    ? `${russian} — ${native}` : russian;
+}
+function languageOptions() {
+  if (!languageOptionsCache) {
+    languageOptionsCache = GOOGLE_LANGUAGE_CODES
+      .map((code) => ({ code, label: languageLabel(code) }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' }));
+  }
+  return languageOptionsCache;
+}
+function regionOptions() {
+  if (!regionOptionsCache) {
+    regionOptionsCache = GOOGLE_REGION_CODES
+      .map((code) => ({ code, label: capitalizeFirst(safeDisplayName('ru', 'region', code)) || code }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' }));
+  }
+  return regionOptionsCache;
+}
+function labelForLanguageCode(code) {
+  const wanted = String(code || '').replace(/^lang_/i, '').trim();
+  const found = languageOptions().find((item) => item.code.toLowerCase() === wanted.toLowerCase());
+  return found ? found.label : `Другой язык (${wanted})`;
+}
+function fillCodeSelect(select, options, emptyLabel, currentValue) {
+  select.replaceChildren(new Option(emptyLabel, ''));
+  options.forEach((item) => select.append(new Option(item.label, item.code)));
+  const value = String(currentValue || '').trim();
+  if (value && !options.some((item) => item.code.toLowerCase() === value.toLowerCase())) {
+    // Значение из старого/импортированного профиля, которого нет в списке: не теряем его.
+    select.append(new Option(`Другое значение (${value})`, value));
+  }
+  const match = [...select.options].find((option) => option.value.toLowerCase() === value.toLowerCase());
+  select.value = match ? match.value : '';
+}
+function parseResultLangs(value) {
+  const seen = new Set();
+  return String(value || '').split(',')
+    .map((item) => item.trim().replace(/^lang_/i, ''))
+    .filter((item) => item && !seen.has(item.toLowerCase()) && seen.add(item.toLowerCase()));
+}
+function renderResultLangsUi() {
+  const selected = parseResultLangs($('results-langs').value);
+  const chips = $('results-langs-chips');
+  chips.replaceChildren();
+  if (!selected.length) {
+    const empty = document.createElement('span');
+    empty.className = 'chip-empty';
+    empty.textContent = 'Любые языки (фильтр не используется)';
+    chips.append(empty);
+  }
+  selected.forEach((code) => {
+    const chip = document.createElement('span'); chip.className = 'chip';
+    const text = document.createElement('span'); text.textContent = labelForLanguageCode(code);
+    const remove = document.createElement('button');
+    remove.type = 'button'; remove.className = 'chip-remove'; remove.textContent = '×';
+    remove.title = 'Убрать язык'; remove.setAttribute('aria-label', `Убрать язык: ${labelForLanguageCode(code)}`);
+    remove.dataset.code = code;
+    chip.append(text, remove); chips.append(chip);
+  });
+  const add = $('results-lang-add');
+  add.replaceChildren(new Option(selected.length ? '+ Добавить ещё язык…' : '+ Выбрать язык…', ''));
+  languageOptions().forEach((item) => {
+    if (selected.some((code) => code.toLowerCase() === item.code.toLowerCase())) return;
+    add.append(new Option(item.label, item.code));
+  });
+  add.value = '';
+}
+function setResultLangs(codes) {
+  $('results-langs').value = codes.join(', ');
+  renderResultLangsUi();
+}
+function populateLocaleControls(values) {
+  fillCodeSelect($('interface-lang'), languageOptions(), NO_VALUE_LABEL, values.interfaceLang);
+  fillCodeSelect($('search-region'), regionOptions(), NO_VALUE_LABEL, values.region);
+  setResultLangs(parseResultLangs(values.resultLangs));
+}
+$('results-lang-add').addEventListener('change', (event) => {
+  const code = event.target.value;
+  if (!code) return;
+  setResultLangs([...parseResultLangs($('results-langs').value), code]);
+});
+$('results-langs-chips').addEventListener('click', (event) => {
+  const button = event.target.closest('.chip-remove');
+  if (!button) return;
+  const code = button.dataset.code.toLowerCase();
+  setResultLangs(parseResultLangs($('results-langs').value).filter((item) => item.toLowerCase() !== code));
+});
+
 function loadProfileIntoForm() {
   const profile = selectedProfile();
   if (!profile) return;
   const values = profileValues(profile);
   $('profile-name').value = values.name;
   $('profile-group').value = values.profileGroup;
-  $('interface-lang').value = values.interfaceLang;
-  $('results-langs').value = values.resultLangs;
-  $('search-region').value = values.region;
+  populateLocaleControls(values);
   renderQueryGroupsEditor(values.queryGroups);
   $('save-status').textContent = '';
   updateProfileKindText(profile);
@@ -382,10 +492,6 @@ $('profile-select').addEventListener('change', async (event) => {
     loadProfileIntoForm();
     monitorProfileKey = monitorProfileKey || selectedProfileKey;
     renderMonitorQueries();
-    const profile = selectedProfile();
-    if (profile?.profileType === 'standard' || profile?.profileType === 'user') {
-      autoApplyProfile(profile).catch((error) => setStatus($('capture-status'), error.message || String(error), 'error'));
-    }
   } catch (error) {
     setStatus($('save-status'), error.message, 'error');
     renderProfileSelectors();
@@ -513,317 +619,8 @@ $('profile-import-file').addEventListener('change', async (event) => {
   finally { event.target.value = ''; }
 });
 
-$('open-preferences').addEventListener('click', async () => {
-  try {
-    await focusGooglePreferencesTab();
-    setStatus($('capture-status'), 'Google Preferences открыта на переднем плане.', 'success');
-  } catch (error) {
-    setStatus($('capture-status'), error.message || String(error), 'error');
-  }
-});
-$('capture-settings').addEventListener('click', async () => {
-  const status = $('capture-status'); setStatus(status, 'Читаю открытые настройки Google…');
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !/^https:\/\/(www\.)?google\.com\/preferences(?:[/?#]|$)/i.test(tab.url || '')) throw new Error('Откройте https://www.google.com/preferences?lang=1 в активной вкладке и повторите.');
-    const [injection] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: captureGooglePreferences });
-    const result = injection?.result || {};
-    if (result.interfaceLang) $('interface-lang').value = result.interfaceLang;
-    if (result.resultLangs?.length) $('results-langs').value = result.resultLangs.join(', ');
-    if (result.region) $('search-region').value = result.region;
-    const found = [result.interfaceLang && 'язык интерфейса', result.resultLangs?.length && 'языки результатов', result.region && 'регион'].filter(Boolean);
-    if (found.length) setStatus(status, `Найдено: ${found.join(', ')}. Проверьте поля и сохраните профиль.`, 'success');
-    else setStatus(status, `Google не отдал распознаваемые выбранные значения. Найдено контролов: ${result.controlsFound || 0}.`, 'error');
-  } catch (error) { setStatus(status, error.message || String(error), 'error'); }
-});
-$('apply-settings').addEventListener('click', async () => {
-  const status = $('capture-status');
-  try {
-    const profile = readProfileFromForm();
-    await persistProfiles();
-    const { result } = await applySettingsInFocusedPreferencesTab({
-      interfaceLang: profile.interfaceLang,
-      resultLangs: profile.resultLangs,
-      region: profile.region
-    });
-    const summary = result.changed?.length ? `Применены: ${result.changed.join(', ')}.` : 'Настройки не применены.';
-    const missing = result.notFound?.length ? ` Не распознаны: ${result.notFound.join(', ')}.` : '';
-    setStatus(status, summary + missing + (result.saveClicked ? ' Подтверждения Google нажаты. Вкладка Preferences оставлена активной.' : ' Проверьте страницу Google.'), result.changed?.length ? 'success' : 'error');
-  } catch (error) { setStatus(status, error.message || String(error), 'error'); }
-});
-
-const RUSSIAN_PROFILE_SETTINGS = Object.freeze({ interfaceLang: 'ru', resultLangs: 'ru', region: 'RU' });
-async function restoreRussianGoogleProfile(statusElement = $('capture-status')) {
-  setStatus(statusElement, 'Возвращаю русский профиль Google и открываю Preferences на переднем плане…');
-  const { result } = await applySettingsInFocusedPreferencesTab(RUSSIAN_PROFILE_SETTINGS);
-  const missing = result.notFound?.length ? ` Не найдены: ${result.notFound.join(', ')}.` : '';
-  if (result.changed?.length && !result.notFound?.length) {
-    setStatus(statusElement, 'Русский профиль Google восстановлен: интерфейс — русский, язык результатов — русский, регион — Россия. Вкладка Preferences активна.', 'success');
-    return { ok: true, result };
-  }
-  setStatus(statusElement, `Не удалось полностью восстановить русский профиль.${missing} Проверьте выбранные значения на открытой вкладке Google Preferences.`, 'error');
-  return { ok: false, result };
-}
-$('restore-russian-profile').addEventListener('click', async () => {
-  try { await restoreRussianGoogleProfile($('capture-status')); }
-  catch (error) { setStatus($('capture-status'), error.message || String(error), 'error'); }
-});
-$('restore-russian-profile-monitor').addEventListener('click', async () => {
-  try { await restoreRussianGoogleProfile($('run-status')); }
-  catch (error) { setStatus($('run-status'), error.message || String(error), 'error'); }
-});
-
-async function captureGooglePreferences() {
-  // Read Google Preferences by stable DOM attributes, not by the UI language.
-  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-  const normalize = (value) => clean(value).toLocaleLowerCase();
-  const getControl = (pid) => document.querySelector(`[data-pid="${pid}"]`);
-  const getDialog = (control) => {
-    const local = control?.querySelector('[role="dialog"]');
-    if (local) return local;
-    const heading = normalize(control?.querySelector('.gn0F7d')?.textContent);
-    const dialogs = [...document.querySelectorAll('[role="dialog"]')];
-    return dialogs.find((dialog) => heading && normalize(dialog.getAttribute('aria-label')) === heading)
-      || dialogs.find((dialog) => heading && normalize(dialog.textContent).includes(heading))
-      || null;
-  };
-  const selectedOptionText = (dialog) => {
-    const item = dialog?.querySelector('[role="option"][aria-selected="true"], [role="option"].CB8nDe');
-    return clean(item?.querySelector('[jsname="ibnC6b"]')?.textContent || item?.innerText || item?.textContent);
-  };
-  const findCodeByLabel = (control, selector, label) => {
-    if (!control || !label) return '';
-    const wanted = normalize(label);
-    const nodes = [...control.querySelectorAll(selector)];
-    const matched = nodes.find((node) => {
-      const candidate = normalize(node.textContent);
-      return candidate && (wanted === candidate || wanted.startsWith(candidate + ' ') || candidate.startsWith(wanted + ' '));
-    });
-    return matched?.getAttribute('data-value') || '';
-  };
-
-  const hlControl = getControl('hl');
-  const lrControl = getControl('lr');
-  const glControl = getControl('gl');
-
-  const hlLabel = selectedOptionText(getDialog(hlControl));
-  let interfaceLang = findCodeByLabel(hlControl, '.vFhVge [data-value]', hlLabel);
-  if (!interfaceLang) {
-    // Fallback for Google layouts that expose the current language as a data attribute.
-    const selected = hlControl?.querySelector('.vFhVge[data-value], .vFhVge [data-value][aria-selected="true"]');
-    interfaceLang = selected?.getAttribute('data-value') || '';
-  }
-  if (!interfaceLang) {
-    const docLang = clean(document.documentElement.lang);
-    if (/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(docLang)) interfaceLang = docLang;
-  }
-
-  const glLabel = selectedOptionText(getDialog(glControl));
-  const region = findCodeByLabel(glControl, '.vFhVge [data-value]', glLabel);
-
-  const lrDialog = getDialog(lrControl);
-  const selectedItems = [...(lrDialog?.querySelectorAll('[role="menuitemcheckbox"][aria-checked="true"], [role="menuitemcheckbox"].CB8nDe') || [])];
-  const langTrigger = lrControl?.querySelector('.vFhVge[data-alllangmap], [data-alllangmap]');
-  const rawMap = langTrigger?.getAttribute('data-alllangmap') || '';
-  const languageMap = rawMap.split(';').map((entry) => {
-    const separator = entry.indexOf('|');
-    if (separator < 0) return null;
-    return {
-      code: clean(entry.slice(0, separator)).replace(/^lang_/i, ''),
-      label: clean(entry.slice(separator + 1))
-    };
-  }).filter((entry) => entry?.code && entry?.label);
-  const resultLangs = [];
-  for (const item of selectedItems) {
-    const itemText = normalize(item.querySelector('[jsname="ibnC6b"]')?.textContent || item.innerText || item.textContent);
-    const match = languageMap.find((entry) => {
-      const label = normalize(entry.label);
-      return itemText === label || itemText.startsWith(label + ' ') || itemText.startsWith(label + '(');
-    });
-    if (match) resultLangs.push(match.code);
-  }
-  // Current Google markup also publishes the selected language codes on the trigger.
-  if (!resultLangs.length) {
-    const displayLangs = langTrigger?.getAttribute('data-displaylang') || '';
-    resultLangs.push(...displayLangs.split(/[;,\s]+/).map((value) => clean(value).replace(/^lang_/i, '')).filter(Boolean));
-  }
-
-  return {
-    interfaceLang: clean(interfaceLang),
-    resultLangs: [...new Set(resultLangs)],
-    region: clean(region),
-    controlsFound: [hlControl, lrControl, glControl].filter(Boolean).length
-  };
-}
-
-async function applyGooglePreferences(settings) {
-  // Google localizes visible labels, but these attributes/actions remain stable across languages.
-  const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-  const normalize = (value) => clean(value).toLocaleLowerCase();
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const getControl = (pid) => document.querySelector(`[data-pid="${pid}"]`);
-  const getTrigger = (control) => control?.querySelector('.HrqWPb')
-    || control?.querySelector('[jsname="jOfkMb"]')
-    || control?.querySelector('[tabindex]')
-    || control;
-  const getDialog = (control) => {
-    const local = control?.querySelector('[role="dialog"]');
-    if (local) return local;
-    const heading = normalize(control?.querySelector('.gn0F7d')?.textContent);
-    const dialogs = [...document.querySelectorAll('[role="dialog"]')];
-    return dialogs.find((dialog) => heading && normalize(dialog.getAttribute('aria-label')) === heading)
-      || dialogs.find((dialog) => heading && normalize(dialog.textContent).includes(heading))
-      || dialogs[dialogs.length - 1]
-      || null;
-  };
-  const isVisible = (element) => {
-    if (!element || element.hidden) return false;
-    const style = getComputedStyle(element);
-    return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
-  };
-  const openDialog = async (control) => {
-    if (!control) return null;
-    let dialog = getDialog(control);
-    if (!isVisible(dialog)) {
-      getTrigger(control)?.click();
-      await delay(360);
-      dialog = getDialog(control);
-    }
-    return isVisible(dialog) ? dialog : null;
-  };
-  const textForCode = (control, code) => {
-    const wanted = clean(code).replace(/^lang_/i, '').toLowerCase();
-    return [...(control?.querySelectorAll('.vFhVge [data-value]') || [])]
-      .find((node) => clean(node.getAttribute('data-value')).toLowerCase() === wanted)
-      ?.textContent || '';
-  };
-  const matchMenuItem = (dialog, roles, mappedText) => {
-    const wanted = normalize(mappedText);
-    if (!wanted) return null;
-    return [...(dialog?.querySelectorAll(roles) || [])].find((item) => {
-      const label = normalize(item.querySelector('[jsname="ibnC6b"]')?.textContent || item.innerText || item.textContent);
-      return label === wanted || label.startsWith(wanted + ' ') || label.startsWith(wanted + '(');
-    }) || null;
-  };
-  const confirmDialog = async (dialog) => {
-    if (!dialog) return false;
-    // Google's current Preferences UI marks the positive action with jsaction Bx2hUb.
-    // This avoids depending on labels such as Confirm, 确认, Aceptar, etc.
-    const explicit = dialog.querySelector('[jsaction*="Bx2hUb"], [data-mdc-dialog-action="ok"], [data-mdc-dialog-action="accept"]');
-    const buttons = [...(dialog.querySelectorAll('button,[role="button"]') || [])];
-    const button = explicit || buttons.find((node) => /^(confirm|ok|apply|save|done|yes|确定|確認|确认|適用|保存|сохранить|применить|подтвердить|готово|aceptar|valider|bevestigen)$/i.test(
-      clean(node.innerText || node.textContent || node.getAttribute('aria-label'))
-    )) || buttons.filter((node) => node.classList.contains('GmiStb')).at(-1) || buttons.at(-1);
-    if (!button) return false;
-    button.click();
-    await delay(500);
-    return true;
-  };
-  const languageMapFor = (control) => {
-    const trigger = control?.querySelector('.vFhVge[data-alllangmap], [data-alllangmap]');
-    const rawMap = trigger?.getAttribute('data-alllangmap') || '';
-    return rawMap.split(';').map((entry) => {
-      const separator = entry.indexOf('|');
-      if (separator < 0) return null;
-      return {
-        code: clean(entry.slice(0, separator)).replace(/^lang_/i, '').toLowerCase(),
-        label: clean(entry.slice(separator + 1))
-      };
-    }).filter((entry) => entry?.code && entry?.label);
-  };
-
-  const changed = [];
-  const notFound = [];
-
-  // Apply result-language filter first and region second. Change interface language last,
-  // because Google may reload or re-render Preferences after changing hl.
-  {
-    const control = getControl('lr');
-    const languageMap = languageMapFor(control);
-    const wantedCodes = clean(settings.resultLangs).split(',').map((value) => value.trim().replace(/^lang_/i, '').toLowerCase()).filter(Boolean);
-    if (wantedCodes.length > 8) throw new Error('Google позволяет выбрать не более 8 языков фильтрации.');
-    if (control && languageMap.length) {
-      const dialog = await openDialog(control);
-      const items = [...(dialog?.querySelectorAll('[role="menuitemcheckbox"]') || [])];
-      if (dialog && items.length) {
-        const allFound = wantedCodes.every((code) => languageMap.some((entry) => entry.code === code));
-        for (const item of items) {
-          const itemText = normalize(item.querySelector('[jsname="ibnC6b"]')?.textContent || item.innerText || item.textContent);
-          const mapEntry = languageMap.find((entry) => {
-            const label = normalize(entry.label);
-            return itemText === label || itemText.startsWith(label + ' ') || itemText.startsWith(label + '(');
-          });
-          if (!mapEntry) continue;
-          const shouldBeChecked = wantedCodes.includes(mapEntry.code);
-          const isChecked = item.getAttribute('aria-checked') === 'true' || item.classList.contains('CB8nDe');
-          if (shouldBeChecked !== isChecked && !item.hasAttribute('disabled')) {
-            item.click();
-            await delay(45);
-          }
-        }
-        if (allFound && await confirmDialog(dialog)) changed.push('языки результатов');
-        else notFound.push('языки результатов');
-      } else notFound.push('языки результатов');
-    } else notFound.push('языки результатов');
-  }
-
-  {
-    const control = getControl('gl');
-    const wantedLabel = textForCode(control, settings.region);
-    if (control && wantedLabel) {
-      const dialog = await openDialog(control);
-      const item = matchMenuItem(dialog, '[role="option"]', wantedLabel);
-      if (dialog && item) {
-        const alreadySelected = item.getAttribute('aria-selected') === 'true' || item.classList.contains('CB8nDe');
-        if (!alreadySelected) item.click();
-        if (await confirmDialog(dialog)) changed.push('регион поиска');
-        else notFound.push('регион поиска');
-      } else notFound.push('регион поиска');
-    } else if (clean(settings.region)) notFound.push('регион поиска');
-  }
-
-  if (clean(settings.interfaceLang)) {
-    const control = getControl('hl');
-    const wantedLabel = textForCode(control, settings.interfaceLang);
-    if (control && wantedLabel) {
-      const dialog = await openDialog(control);
-      const item = matchMenuItem(dialog, '[role="option"]', wantedLabel);
-      if (dialog && item) {
-        const alreadySelected = item.getAttribute('aria-selected') === 'true' || item.classList.contains('CB8nDe');
-        if (!alreadySelected) item.click();
-        if (await confirmDialog(dialog)) changed.push('язык интерфейса');
-        else notFound.push('язык интерфейса');
-      } else notFound.push('язык интерфейса');
-    } else notFound.push('язык интерфейса');
-  }
-
-  return { changed, notFound, saveClicked: changed.length > 0 };
-}
-
-async function autoApplyProfile(profile) {
-  const status = $('capture-status');
-  setStatus(status, `Применяю профиль «${profile.name}». Переключаюсь на Google Preferences…`);
-  const { result } = await applySettingsInFocusedPreferencesTab({
-    interfaceLang: profile.interfaceLang,
-    resultLangs: profile.resultLangs,
-    region: profile.region
-  });
-  if (result.changed?.length) {
-    const missing = result.notFound?.length ? ` Не найдены: ${result.notFound.join(', ')}.` : '';
-    setStatus(status, `Профиль выбран. Google: ${result.changed.join(', ')}.${missing} Вкладка Preferences активна.`, result.notFound?.length ? 'error' : 'success');
-  } else {
-    setStatus(status, `Профиль выбран, но Google не подтвердил настройки.${result.notFound?.length ? ` Не найдены: ${result.notFound.join(', ')}.` : ''} Вкладка Preferences открыта на переднем плане; проверьте её.`, 'error');
-  }
-}
-
-const GOOGLE_PREFERENCES_URL = 'https://www.google.com/preferences?lang=1';
-function isGooglePreferencesTab(tab) {
-  return /^https:\/\/(?:www\.)?google\.com\/preferences(?:[/?#]|$)/i.test(tab?.url || '');
-}
-
 // Every tab opened or navigated by the extension is activated and its Chrome
-// window is brought to the foreground. This is intentional: Google Preferences
-// does not reliably commit changes from a background tab.
+// window is brought to the foreground so Google pages load and render reliably.
 async function activateAndFocusTab(tabOrId) {
   const tabId = typeof tabOrId === 'number' ? tabOrId : tabOrId?.id;
   if (!tabId) throw new Error('Не удалось определить вкладку для активации.');
@@ -834,43 +631,6 @@ async function activateAndFocusTab(tabOrId) {
     catch (_) { /* Chrome may restrict focusing a window; the tab is still activated. */ }
   }
   return await chrome.tabs.get(tabId);
-}
-
-async function focusGooglePreferencesTab() {
-  const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  const allTabs = await chrome.tabs.query({});
-  let tab = isGooglePreferencesTab(activeTab) ? activeTab : null;
-  if (!tab) {
-    tab = allTabs.find((candidate) => isGooglePreferencesTab(candidate)
-      && (!activeTab?.windowId || candidate.windowId === activeTab.windowId))
-      || allTabs.find(isGooglePreferencesTab)
-      || null;
-  }
-  if (tab?.id) {
-    tab = await activateAndFocusTab(tab.id);
-  } else {
-    const createOptions = { url: GOOGLE_PREFERENCES_URL, active: true };
-    if (activeTab?.windowId) createOptions.windowId = activeTab.windowId;
-    tab = await chrome.tabs.create(createOptions);
-    tab = await activateAndFocusTab(tab.id);
-  }
-  await waitForTabComplete(tab.id, 25000);
-  // Reactivate after navigation: Google can briefly re-render the page.
-  return await activateAndFocusTab(tab.id);
-}
-async function applySettingsInFocusedPreferencesTab(settings) {
-  const tab = await focusGooglePreferencesTab();
-  const [injection] = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: applyGooglePreferences,
-    args: [{ interfaceLang: settings.interfaceLang || '', resultLangs: settings.resultLangs || '', region: settings.region || '' }]
-  });
-  // Interface-language changes can trigger a full navigation. Wait for it before
-  // reactivating Preferences so the final Google page is still the focused tab.
-  await waitForTabComplete(tab.id, 15000);
-  await sleep(250);
-  const focusedTab = await activateAndFocusTab(tab.id);
-  return { tab: focusedTab, result: injection?.result || {} };
 }
 
 async function waitForTabComplete(tabId, timeoutMs = 30000, cancelPromise = null) {
@@ -937,12 +697,22 @@ function renderMonitorQueries(profileKeyOverride = $('monitor-profile').value ||
     heading.textContent = `${group.title} · ${group.entries.length}`;
     container.append(heading);
     group.entries.forEach(({ query, index }) => {
-      const label = document.createElement('label'); label.className = 'query-check';
+      // Keep report selection separate from navigation: the query text is a
+      // regular link, not part of the checkbox label, so clicking it never
+      // toggles report selection or starts the report workflow.
+      const row = document.createElement('div'); row.className = 'query-check';
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox'; checkbox.checked = true;
       checkbox.dataset.profileKey = key; checkbox.dataset.queryIndex = String(index);
-      const text = document.createElement('span'); text.textContent = query;
-      label.append(checkbox, text); container.append(label);
+      checkbox.setAttribute('aria-label', `Добавить запрос в отчёт: ${query}`);
+      const link = document.createElement('a');
+      link.className = 'query-open-link';
+      link.textContent = query;
+      link.href = createSearchUrl(query, profileValues(profile), $('period').value || 'all', 0);
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.title = 'Открыть этот запрос в Google в новой вкладке';
+      row.append(checkbox, link); container.append(row);
     });
   });
 }
@@ -967,6 +737,22 @@ function createSearchUrl(query, profile, period, start = 0) {
   if (period !== 'all') url.searchParams.set('tbs', `qdr:${period}`);
   return url.toString();
 }
+
+// The standalone query links always point to the first Google results page.
+// Changing the selected period refreshes their URLs without touching any tab
+// used by report generation or its sequential pagination workflow.
+$('period').addEventListener('change', () => {
+  const key = $('monitor-profile').value || monitorProfileKey;
+  const profile = getProfileByKey(key);
+  if (!profile) return;
+  const values = profileValues(profile);
+  $('monitor-query-list').querySelectorAll('.query-open-link').forEach((link) => {
+    const row = link.closest('.query-check');
+    const checkbox = row?.querySelector('input[type="checkbox"]');
+    const query = values.queries[Number(checkbox?.dataset.queryIndex)];
+    if (query) link.href = createSearchUrl(query, values, $('period').value, 0);
+  });
+});
 
 function includeSimilarResults(urlValue) {
   const url = new URL(urlValue);
@@ -1079,7 +865,7 @@ function createReportHtml(report) {
 <style>
 :root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}.filter-summary{padding:10px 12px;background:#f1f5fb;border-radius:8px;font-size:12px}.filter-summary.warning{color:#8b1e1e;background:#fce8e6}.hidden-results{margin:18px 0;padding:14px 16px;background:#fff;border:1px solid #e3e6eb;border-radius:12px}.hidden-results summary{cursor:pointer;font-weight:700;color:#3c4043}.hidden-intro{font-size:12px;color:#687078}.hidden-result{padding:12px 0;border-top:1px dashed #e5e8ec}.exclusion-reason{padding:9px 11px;background:#fff7e6;border-radius:7px;font-size:12px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
-<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Настройки Google Preferences:</b> ${report.preferencesApplied ? 'подтверждены перед началом мониторинга' : 'не подтверждены'}<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Минимальный интервал Google:</b> ${Number(report.googleSearchMinIntervalSeconds ?? 2)} сек.<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : report.googleBlocked ? 'Google ограничил запросы; сохранены ранее собранные результаты' : 'Завершён'}</p>${filterSummary}</header>
+<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Передача настроек:</b> язык, страна и фильтр языка передаются прямо в ссылке поиска (hl, gl, lr)<br><b>Похожие результаты:</b> запрошено включение (filter=0)<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Минимальный интервал Google:</b> ${Number(report.googleSearchMinIntervalSeconds ?? 2)} сек.<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : report.googleBlocked ? 'Google ограничил запросы; сохранены ранее собранные результаты' : 'Завершён'}</p>${filterSummary}</header>
 ${rows}
 ${hiddenSection}
 <footer>Отчёт создан расширением Google Region Monitor. Ссылки на результаты открываются в новых вкладках.</footer></body></html>`;
@@ -1461,7 +1247,6 @@ $('run-report').addEventListener('click', async () => {
   const totalSteps = queryList.length * maxPages;
   let completedSteps = 0;
   let stoppedByUser = false;
-  let monitoringStarted = false;
   let tabId = null;
   stopRequested = false;
   stopSignalPromise = new Promise((resolve) => { stopSignalResolver = resolve; });
@@ -1471,7 +1256,7 @@ $('run-report').addEventListener('click', async () => {
   $('google-search-min-interval-seconds').disabled = true;
   $('chatgpt-region-reasoning-enabled').disabled = true;
   $('chatgpt-region-reasoning-effort').disabled = true;
-  $('stop-monitor').disabled = true; // Enabled only after Preferences are applied.
+  $('stop-monitor').disabled = true; // Enabled once the search tab is open.
   $('monitor-profile').disabled = true;
   $('select-all-queries').disabled = true;
   $('clear-queries').disabled = true;
@@ -1481,7 +1266,7 @@ $('run-report').addEventListener('click', async () => {
   setStatus($('run-status'), `Подготавливаю профиль «${profile.name}» для отчёта…`);
   addLog(`Профиль для этого запуска зафиксирован: «${profile.name}» (${selectedKey}).`);
   addLog(`Выбрано запросов: ${queryList.length}.`);
-  addLog('Сначала применяю настройки Google Preferences. Поиск начнётся только после подтверждения настроек.');
+  addLog(`Язык и регион передаются прямо в ссылке поиска: hl=${profile.interfaceLang || '—'}, gl=${profile.region || '—'}, lr=${profile.resultLangs || '—'}.`);
 
   const report = {
     profile: { ...profile },
@@ -1490,38 +1275,14 @@ $('run-report').addEventListener('click', async () => {
     createdAt: new Date().toLocaleString('ru-RU'),
     queries: [],
     selectedQueryCount: queryList.length,
-    preferencesApplied: false,
     stoppedByUser: false
   };
 
   try {
     await chrome.storage.local.set({ [GOOGLE_SEARCH_MIN_INTERVAL_SETTING]: googleSearchMinIntervalSeconds });
-    // Apply the Monitoring profile (not the profile selected on the other tab)
-    // before opening the first Google Search page.
-    const { result: preferencesResult } = await applySettingsInFocusedPreferencesTab({
-      interfaceLang: profile.interfaceLang,
-      resultLangs: profile.resultLangs,
-      region: profile.region
-    });
-    const expectedSettings = ['языки результатов']; // Empty resultLangs means clear the language filter.
-    if (profile.interfaceLang) expectedSettings.push('язык интерфейса');
-    if (profile.region) expectedSettings.push('регион поиска');
-    const missingSettings = [
-      ...(preferencesResult.notFound || []),
-      ...expectedSettings.filter((label) => !(preferencesResult.changed || []).includes(label))
-    ];
-    if (missingSettings.length) {
-      const uniqueMissing = [...new Set(missingSettings)];
-      throw new Error(`Мониторинг не запущен: Google не подтвердил настройки профиля «${profile.name}»: ${uniqueMissing.join(', ')}. Проверьте активную вкладку Preferences и повторите запуск.`);
-    }
-    report.preferencesApplied = true;
-    addLog(`Настройки профиля «${profile.name}» подтверждены в Google Preferences: hl=${profile.interfaceLang || 'без изменения'}, lr=${profile.resultLangs || 'без языкового фильтра'}, gl=${profile.region || 'без изменения'}.`);
-    setStatus($('run-status'), `Настройки профиля «${profile.name}» применены. Перехожу к поиску…`, 'success');
-
     const tab = await chrome.tabs.create({ url: 'about:blank', active: true });
     tabId = tab.id;
     await activateAndFocusTab(tabId);
-    monitoringStarted = true;
     $('stop-monitor').disabled = false;
     setStatus($('run-status'), `Запуск: ${queryList.length} запрос(ов), до ${maxPages} страниц на запрос…`);
     addLog(`Общий минимальный интервал Google: ${googleSearchMinIntervalSeconds} сек. (для всех запросов и страниц пагинации).`);
@@ -1621,21 +1382,6 @@ $('run-report').addEventListener('click', async () => {
   } finally {
     if (tabId !== null) {
       try { await chrome.tabs.remove(tabId); } catch (_) {}
-    }
-    if (monitoringStarted && $('restore-russian-after-monitor')?.checked) {
-      addLog('Мониторинг завершён: возвращаю русский профиль Google…');
-      try {
-        const { result } = await applySettingsInFocusedPreferencesTab(RUSSIAN_PROFILE_SETTINGS);
-        if (result.changed?.length && !result.notFound?.length) {
-          const currentStatus = $('run-status').textContent;
-          setStatus($('run-status'), `${currentStatus} Русский профиль Google восстановлен; Preferences открыта на переднем плане.`, 'success');
-          addLog('Русский профиль восстановлен: hl=ru, lr=ru, gl=RU.');
-        } else {
-          addLog(`Не удалось полностью восстановить русский профиль${result.notFound?.length ? `: ${result.notFound.join(', ')}` : ''}. Проверьте вкладку Preferences.`);
-        }
-      } catch (restoreError) {
-        addLog(`Ошибка возврата к русскому профилю: ${restoreError.message || String(restoreError)}`);
-      }
     }
     isRunning = false;
     stopRequested = false;

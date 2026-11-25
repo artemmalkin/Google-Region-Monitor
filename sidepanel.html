@@ -25,7 +25,7 @@
       <div class="section-heading">
         <div>
           <h2>Профили регионов</h2>
-          <p>Сохраните язык Google, язык результатов и регион поиска.</p>
+          <p>Выберите язык, страну и фильтр языка — настройки уйдут прямо в ссылку поиска.</p>
         </div>
         <button id="new-profile" class="button button-secondary button-compact" type="button">+ Профиль</button>
       </div>
@@ -52,39 +52,19 @@
         <datalist id="profile-groups-suggestions"></datalist>
         <p class="field-help">Укажите одинаковое название у профилей, которые хотите объединить. Группы создаются и сортируются автоматически.</p>
 
-        <div class="field-row">
-          <div>
-            <label class="field-label" for="interface-lang">Язык интерфейса (hl)</label>
-            <input id="interface-lang" type="text" placeholder="vi">
-            <p class="field-help">Код языка, например vi, en, ru.</p>
-          </div>
-          <div>
-            <label class="field-label" for="search-region">Регион поиска (gl)</label>
-            <input id="search-region" type="text" placeholder="VN">
-            <p class="field-help">Код страны, например VN, DE, NL.</p>
-          </div>
-        </div>
+        <label class="field-label" for="search-region">Страна поиска</label>
+        <select id="search-region"></select>
+        <p class="field-help">Google подбирает выдачу так, как её видят пользователи этой страны.</p>
 
-        <label class="field-label" for="results-langs">Фильтрация результатов по языку</label>
-        <input id="results-langs" type="text" placeholder="vi, en">
-        <p class="field-help">Один или несколько кодов языков через запятую. Оставьте пустым, чтобы не ограничивать язык выдачи.</p>
+        <label class="field-label" for="interface-lang">Язык интерфейса Google</label>
+        <select id="interface-lang"></select>
+        <p class="field-help">Язык, на котором Google показывает страницу поиска.</p>
 
-        <div class="capture-box">
-          <div class="capture-copy">
-            <strong>Считать настройки с Google</strong>
-            <span>Откройте Google Preferences, выставьте параметры и нажмите кнопку.</span>
-          </div>
-          <button id="capture-settings" class="button button-secondary" type="button">Считать текущие</button>
-        </div>
-        <div class="button-row">
-          <button id="open-preferences" class="text-button" type="button">Открыть Google Preferences ↗</button>
-          <button id="apply-settings" class="text-button" type="button">Применить профиль в Google ↗</button>
-        </div>
-        <div class="button-row">
-          <button id="restore-russian-profile" class="button button-secondary button-compact" type="button">Вернуть русский профиль для обычной работы</button>
-        </div>
-        <p class="field-help">Русский профиль: интерфейс ru, результаты ru, регион RU. При применении вкладка Google Preferences автоматически станет активной.</p>
-        <div id="capture-status" class="inline-status" role="status"></div>
+        <label class="field-label" for="results-lang-add">Показывать результаты только на языках</label>
+        <div id="results-langs-chips" class="chip-list" aria-live="polite"></div>
+        <select id="results-lang-add"></select>
+        <input id="results-langs" type="hidden">
+        <p class="field-help">Можно выбрать несколько языков. Если ничего не выбрано, Google покажет результаты на любых языках.</p>
       </div>
 
       <div class="card">
@@ -150,7 +130,7 @@
         <div class="section-heading compact-heading query-heading">
           <div>
             <h3>Запросы для отчёта</h3>
-            <p>Выберите все или только нужные.</p>
+            <p>Флажками отметьте запросы для отчёта. Нажмите на текст запроса, чтобы открыть его в Google в новой вкладке без формирования отчёта.</p>
           </div>
           <div class="link-buttons">
             <button id="select-all-queries" class="text-button" type="button">Все</button>
@@ -198,11 +178,6 @@
           <option value="xhigh">Максимальный</option>
         </select>
         <p class="field-help">В интерфейсе с подпиской расширение выбирает этот уровень через меню «Выбрать модель ChatGPT» (значения low, medium, high, xhigh). В интерфейсе с одной кнопкой «Размышление» включает её; выбор уровня там недоступен. Если выбранного уровня нет в текущем меню, проверка не будет отправлена и ссылки останутся в отчёте.</p>
-        <label class="restore-after-monitor">
-          <input id="restore-russian-after-monitor" type="checkbox" checked>
-          <span>После завершения мониторинга автоматически вернуть русский профиль Google и открыть Preferences на переднем плане</span>
-        </label>
-        <button id="restore-russian-profile-monitor" class="button button-secondary button-compact" type="button">Вернуть русский профиль сейчас</button>
       </div>
 
       <div class="run-box">

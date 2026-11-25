@@ -55,11 +55,6 @@ textarea { resize: vertical; min-height: 115px; line-height: 1.55; }
 .card { margin-top: 13px; padding: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .field-row > div { min-width: 0; }
-.capture-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 15px; padding: 11px; border: 1px solid #dce7f8; border-radius: 9px; background: #f7faff; }
-.capture-copy { min-width: 0; }
-.capture-copy strong, .capture-copy span { display: block; }
-.capture-copy strong { font-size: 11.5px; }
-.capture-copy span { margin-top: 3px; color: var(--muted); font-size: 10px; }
 .button { border: 1px solid transparent; border-radius: 8px; padding: 9px 12px; font-weight: 650; white-space: nowrap; }
 .button-primary { color: white; background: var(--blue); }
 .button-primary:hover { background: var(--blue-dark); }
@@ -82,7 +77,9 @@ textarea { resize: vertical; min-height: 115px; line-height: 1.55; }
 .query-list { display: grid; gap: 7px; max-height: 210px; overflow-y: auto; margin: 8px 0 14px; }
 .query-check { display: flex; align-items: flex-start; gap: 8px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow-wrap: anywhere; }
 .query-check input { width: auto; margin: 2px 0 0; accent-color: var(--blue); }
-.query-check span { flex: 1; font-size: 11px; }
+.query-open-link { flex: 1; min-width: 0; color: var(--blue); font-size: 11px; line-height: 1.4; text-decoration: none; overflow-wrap: anywhere; cursor: pointer; }
+.query-open-link:hover { text-decoration: underline; }
+.query-open-link:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 2px; }
 .empty-state { color: var(--muted); font-size: 11px; }
 .run-box { margin-top: 14px; padding: 13px; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
 .button-large { width: 100%; padding: 11px 12px; }
@@ -95,7 +92,7 @@ textarea { resize: vertical; min-height: 115px; line-height: 1.55; }
 .run-log { display: grid; gap: 5px; max-height: 180px; overflow-y: auto; margin-top: 9px; color: #5f6368; font-size: 10px; }
 .run-log div { padding-left: 8px; border-left: 2px solid #dbe5f6; }
 footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 16px 16px; color: #858b91; font-size: 9.5px; }
-@media (max-width: 350px) { main { padding: 12px; } .field-row { grid-template-columns: 1fr; gap: 0; } .capture-box { align-items: flex-start; flex-direction: column; } .sticky-actions { margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; } }
+@media (max-width: 350px) { main { padding: 12px; } .field-row { grid-template-columns: 1fr; gap: 0; } .sticky-actions { margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; } }
 
 .update-card h3 { margin-bottom: 4px; }
 .update-card .button-row { gap: 7px; }
@@ -132,7 +129,7 @@ footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 
 .release-link:hover { text-decoration: underline; }
 .query-group-heading { margin: 12px 0 5px; padding-bottom: 5px; border-bottom: 1px solid var(--line); color: #3c4043; font-size: 11px; font-weight: 750; }
 .query-group-heading:first-child { margin-top: 0; }
-.query-check span { overflow-wrap: anywhere; }
+.query-check { align-items: flex-start; }
 
 
 /* User-managed profile and query groups */
@@ -146,3 +143,10 @@ footer { display: flex; justify-content: space-between; gap: 8px; padding: 12px 
 
 .release-notes-warning { padding: 9px; border: 1px solid #d93025; border-radius: 8px; background: #fce8e6; color: #8c1d18; }
 .release-notes-warning p { margin: 0; }
+
+/* Выбор языков результатов: выбранные языки отображаются «чипами» */
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; min-height: 28px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border: 1px solid #d2e3fc; border-radius: 999px; background: #e8f0fe; color: #174ea6; font-size: 12px; font-weight: 600; }
+.chip-remove { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; color: #174ea6; background: transparent; font-size: 14px; line-height: 1; }
+.chip-remove:hover { background: #d2e3fc; }
+.chip-empty { color: var(--muted); font-size: 12px; }
