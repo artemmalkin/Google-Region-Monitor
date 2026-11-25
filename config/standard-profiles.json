@@ -1,10 +1,6 @@
 {
   "schemaVersion": 1,
-<<<<<<< HEAD
   "updatedAt": "2026-11-23T15:48:00.000Z",
-=======
-  "updatedAt": "2026-11-24T10:36:41.400Z",
->>>>>>> 9047c25bac5aee95d417fa9487392a0fc6ffbcd1
   "profiles": [
     {
       "id": "argentina",
@@ -12,8 +8,12 @@
       "interfaceLang": "es",
       "resultLangs": "es, en",
       "region": "AR",
+      "queries": [
+        "(\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
+        "site:x.com Argentina (\"energía nuclear\" OR \"industria nuclear\" OR Atucha OR Embalse) -arma -guerra -misil",
+        "(site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
+      ],
       "profileGroup": "Латинская Америка",
-      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -31,20 +31,20 @@
           ]
         }
       ],
-      "queries": [
-        "(\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
-        "site:x.com Argentina (\"energía nuclear\" OR \"industria nuclear\" OR Atucha OR Embalse) -arma -guerra -misil",
-        "(site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
-      ]
+      "queryGroupsRevision": 2
     },
     {
       "id": "bangladesh",
       "name": "Бангладеш",
       "interfaceLang": "en",
-      "resultLangs": "bn",
+      "resultLangs": "en, bn",
       "region": "BD",
+      "queries": [
+        "(BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Bangladesh AND (BAEC OR \"nuclear power plant\"))",
+        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
+      ],
       "profileGroup": "Южная Азия",
-      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -62,11 +62,7 @@
           ]
         }
       ],
-      "queries": [
-        "(BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Bangladesh AND (BAEC OR \"nuclear power plant\"))",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
-      ]
+      "queryGroupsRevision": 2
     },
     {
       "id": "bolivia",
@@ -148,32 +144,20 @@
           "id": "main",
           "name": "Основные запросы",
           "queries": [
-            "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\") -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com",
-            "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\") -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com"
+            "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
+            "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")"
           ]
         },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-<<<<<<< HEAD
             "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Vietnam -site:.ru",
             "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
           ]
         }
       ],
       "queryGroupsRevision": 2
-=======
-            "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com"
-          ]
-        }
-      ],
-      "queries": [
-        "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\") -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com",
-        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\") -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com",
-        "rosatom -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:x.com"
-      ]
->>>>>>> 9047c25bac5aee95d417fa9487392a0fc6ffbcd1
     },
     {
       "id": "india",
@@ -374,11 +358,15 @@
     {
       "id": "myanmar",
       "name": "Мьянма",
-      "interfaceLang": "my",
+      "interfaceLang": "en",
       "resultLangs": "en",
       "region": "MM",
+      "queries": [
+        "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
+        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
+        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
+      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
-      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -392,15 +380,11 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "rosatom -site:.ru site:.mm"
+            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
           ]
         }
       ],
-      "queries": [
-        "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
-        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
-        "rosatom -site:.ru site:.mm"
-      ]
+      "queryGroupsRevision": 2
     },
     {
       "id": "paraguay",
