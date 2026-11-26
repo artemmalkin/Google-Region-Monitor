@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T15:16:38.596Z",
+  "updatedAt": "2026-11-26T15:21:15.415Z",
   "profiles": [
     {
       "id": "argentina",
@@ -224,7 +224,7 @@
           "id": "rosatom-projects",
           "name": "Конкуренты Росатома",
           "queries": [
-            "EDF OR Westinghouse OR KHNP OR CNNC"
+            "EDF OR Westinghouse OR KHNP OR CNNC PLTN Indonesia"
           ]
         },
         {
@@ -233,12 +233,20 @@
           "queries": [
             "PLTN reaktor modular kecil limbah radioaktif"
           ]
+        },
+        {
+          "id": "mwxp79vz-a4frcee",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "kebijakan nuklir opini publik tentang nuklir"
+          ]
         }
       ],
       "queries": [
         "Rosatom PLTN reaktor modular kecil",
-        "EDF OR Westinghouse OR KHNP OR CNNC",
-        "PLTN reaktor modular kecil limbah radioaktif"
+        "EDF OR Westinghouse OR KHNP OR CNNC PLTN Indonesia",
+        "PLTN reaktor modular kecil limbah radioaktif",
+        "kebijakan nuklir opini publik tentang nuklir"
       ]
     },
     {
