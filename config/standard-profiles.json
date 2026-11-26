@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T17:00:00.000Z",
+  "updatedAt": "2026-11-26T18:13:49.410Z",
   "profiles": [
     {
       "id": "argentina",
@@ -11,10 +11,34 @@
       "profileGroup": "Латинская Америка",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom energía nuclear Argentina"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Argentina"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR plantas Argentina"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Argentina"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom energía nuclear Argentina"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Argentina"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "energía nuclear SMR plantas Argentina"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "política nuclear opinión pública Argentina"
+          ]
+        }
       ],
       "queries": [
         "Rosatom energía nuclear Argentina",
@@ -32,10 +56,34 @@
       "profileGroup": "Южная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Rooppur OR RNPP OR BAEC Bangladesh -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Bangladesh"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear power plant SMR Rooppur Bangladesh"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion Bangladesh"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR Rooppur OR RNPP OR BAEC Bangladesh -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Bangladesh"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "nuclear power plant SMR Rooppur Bangladesh"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "nuclear policy public opinion Bangladesh"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR Rooppur OR RNPP OR BAEC Bangladesh -site:.ru",
@@ -51,20 +99,50 @@
       "resultLangs": "es, en",
       "region": "BO",
       "profileGroup": "Латинская Америка",
-      "queryGroupsRevision": 4,
+      "queryGroupsRevision": 2,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR YLB energía nuclear Bolivia"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Bolivia"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR litio Bolivia"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Bolivia"] },
-        { "id": "lithium-sector", "name": "Литиевый сектор Боливии", "queries": ["YLB litio Bolivia SQM Codelco"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR YLB energía nuclear Bolivia"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Bolivia"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "energía nuclear SMR litio Bolivia"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "política nuclear opinión pública Bolivia"
+          ]
+        },
+        {
+          "id": "lithium-sector",
+          "name": "Литиевый сектор Боливии",
+          "queries": [
+            "YLB OR litio OR SQM OR Codelco Bolivia"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR YLB energía nuclear Bolivia",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Bolivia",
         "energía nuclear SMR litio Bolivia",
         "política nuclear opinión pública Bolivia",
-        "YLB litio Bolivia SQM Codelco"
+        "YLB OR litio OR SQM OR Codelco Bolivia"
       ]
     },
     {
@@ -76,10 +154,34 @@
       "profileGroup": "Латинская Америка",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Eletronuclear energia nuclear Brasil"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energia nuclear Brasil"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energia nuclear SMR Eletronuclear Brasil"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinião pública Brasil"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR Eletronuclear energia nuclear Brasil"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energia nuclear Brasil"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "energia nuclear SMR Eletronuclear Brasil"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "política nuclear opinião pública Brasil"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR Eletronuclear energia nuclear Brasil",
@@ -97,10 +199,34 @@
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom nhà máy điện hạt nhân"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC điện hạt nhân Việt Nam"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["điện hạt nhân lò phản ứng mô-đun nhỏ"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["ý kiến công chúng về điện hạt nhân"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom nhà máy điện hạt nhân"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC điện hạt nhân Việt Nam"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "điện hạt nhân lò phản ứng mô-đun nhỏ"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "ý kiến công chúng về điện hạt nhân"
+          ]
+        }
       ],
       "queries": [
         "Rosatom nhà máy điện hạt nhân",
@@ -118,10 +244,34 @@
       "profileGroup": "Южная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Kudankulam OR TVEL OR Uranium One India -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear India"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear energy SMR NSR India"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["\"India-Russia relations\" nuclear policy India"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR Kudankulam OR TVEL OR Uranium One India -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear India"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "nuclear energy SMR NSR India"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "\"India-Russia relations\" nuclear policy India"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR Kudankulam OR TVEL OR Uranium One India -site:.ru",
@@ -139,10 +289,34 @@
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom PLTN reaktor modular kecil"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC PLTN Indonesia"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["PLTN reaktor modular kecil limbah radioaktif"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["kebijakan nuklir opini publik tentang nuklir"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom PLTN reaktor modular kecil"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC PLTN Indonesia"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "PLTN reaktor modular kecil limbah radioaktif"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "kebijakan nuklir opini publik tentang nuklir"
+          ]
+        }
       ],
       "queries": [
         "Rosatom PLTN reaktor modular kecil",
@@ -160,10 +334,34 @@
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom 核电 中国"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 核电 中国"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["核电 小型模块化反应堆 能源规划"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["公众对核电的态度 能源规划"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom 核电 中国"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 核电 中国"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "核电 小型模块化反应堆 能源规划"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "公众对核电的态度 能源规划"
+          ]
+        }
       ],
       "queries": [
         "Rosatom 核电 中国",
@@ -181,10 +379,34 @@
       "profileGroup": "Латинская Америка",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom energía nuclear Cuba"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Cuba"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR plantas Cuba"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Cuba"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom energía nuclear Cuba"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Cuba"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "energía nuclear SMR plantas Cuba"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "política nuclear opinión pública Cuba"
+          ]
+        }
       ],
       "queries": [
         "Rosatom energía nuclear Cuba",
@@ -202,10 +424,34 @@
       "profileGroup": "Южная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR TVEL AEBF Malaysia -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Malaysia"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear energy SMR ASEAN Malaysia"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion Malaysia"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR TVEL AEBF Malaysia -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Malaysia"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "nuclear energy SMR ASEAN Malaysia"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "nuclear policy public opinion Malaysia"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR TVEL AEBF Malaysia -site:.ru",
@@ -223,10 +469,34 @@
       "profileGroup": "Латинская Америка",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom energía nuclear México"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear México"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR plantas México"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública México"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom energía nuclear México"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear México"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "energía nuclear SMR plantas México"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "política nuclear opinión pública México"
+          ]
+        }
       ],
       "queries": [
         "Rosatom energía nuclear México",
@@ -244,10 +514,34 @@
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом Myanmar -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Myanmar"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear energy SMR Myanmar"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion Myanmar"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR Росатом Myanmar -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Myanmar"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "nuclear energy SMR Myanmar"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "nuclear policy public opinion Myanmar"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR Росатом Myanmar -site:.ru",
@@ -265,10 +559,34 @@
       "profileGroup": "Латинская Америка",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom energía nuclear Paraguay"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Paraguay"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR plantas Paraguay"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Paraguay"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom energía nuclear Paraguay"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Paraguay"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "energía nuclear SMR plantas Paraguay"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "política nuclear opinión pública Paraguay"
+          ]
+        }
       ],
       "queries": [
         "Rosatom energía nuclear Paraguay",
@@ -286,10 +604,34 @@
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом โรงไฟฟ้านิวเคลียร์ ประเทศไทย -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC โรงไฟฟ้านิวเคลียร์ ประเทศไทย"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["SMR กากกัมมันตรังสี ประเทศไทย"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["นโยบายพลังงานนิวเคลียร์ ความคิดเห็นสาธารณะ ประเทศไทย"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR Росатом โรงไฟฟ้านิวเคลียร์ ประเทศไทย -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC โรงไฟฟ้านิวเคลียร์ ประเทศไทย"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "SMR กากกัมมันตรังสี ประเทศไทย"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "นโยบายพลังงานนิวเคลียร์ ความคิดเห็นสาธารณะ ประเทศไทย"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR Росатом โรงไฟฟ้านิวเคลียร์ ประเทศไทย -site:.ru",
@@ -307,10 +649,34 @@
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом Philippines -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Philippines"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear power SMR Philippines"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion Philippines"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR Росатом Philippines -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Philippines"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "nuclear power SMR Philippines"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "nuclear policy public opinion Philippines"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR Росатом Philippines -site:.ru",
@@ -328,10 +694,34 @@
       "profileGroup": "Латинская Америка",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR SQM energía nuclear Chile"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Chile"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR litio Chile"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Chile"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR SQM energía nuclear Chile"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Chile"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "energía nuclear SMR litio Chile"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "política nuclear opinión pública Chile"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR SQM energía nuclear Chile",
@@ -349,10 +739,34 @@
       "profileGroup": "Южная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR TVEL \"Sri Lanka\" -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear \"Sri Lanka\""] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear energy SMR \"Sri Lanka\""] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion \"Sri Lanka\""] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR TVEL \"Sri Lanka\" -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear \"Sri Lanka\""
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "nuclear energy SMR \"Sri Lanka\""
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "nuclear policy public opinion \"Sri Lanka\""
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR TVEL \"Sri Lanka\" -site:.ru",
@@ -370,10 +784,34 @@
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом \"South Korea\" -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 원자력 한국"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["원자력 SMR 소형모듈원전"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["원자력 정책 여론 한국"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR Росатом \"South Korea\" -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 원자력 한국"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "원자력 SMR 소형모듈원전"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "원자력 정책 여론 한국"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR Росатом \"South Korea\" -site:.ru",
@@ -391,10 +829,34 @@
       "profileGroup": "Восточная и Юго-Восточная Азия",
       "queryGroupsRevision": 4,
       "queryGroups": [
-        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом 日本 -site:.ru"] },
-        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 原発 日本"] },
-        { "id": "energy", "name": "Энергетическая сфера", "queries": ["原発 SMR エネルギー政策 日本"] },
-        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["原子力政策 世論 日本"] }
+        {
+          "id": "rosatom-projects",
+          "name": "Росатом и его проекты",
+          "queries": [
+            "Rosatom OR Росатом 日本 -site:.ru"
+          ]
+        },
+        {
+          "id": "competitors",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 原発 日本"
+          ]
+        },
+        {
+          "id": "energy",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "原発 SMR エネルギー政策 日本"
+          ]
+        },
+        {
+          "id": "public-policy",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "原子力政策 世論 日本"
+          ]
+        }
       ],
       "queries": [
         "Rosatom OR Росатом 日本 -site:.ru",
