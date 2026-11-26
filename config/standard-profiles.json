@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T11:45:45.929Z",
+  "updatedAt": "2026-11-26T12:06:30.634Z",
   "profiles": [
     {
       "id": "argentina",
@@ -147,7 +147,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(Rosatom OR Atomenergoprom OR Rosenergoatom OR TVEL OR TENEX OR ASE) (Việt Nam OR Vietnam) (điện hạt nhân OR nuclear OR SMR OR Ninh Thuận OR nhiên liệu OR fuel OR chất thải OR waste OR y học OR medicine OR điện gió OR wind OR lưu trữ OR storage OR Tuyến đường biển phía Bắc OR Northern Sea Route)"
+            "(Rosatom OR Atomenergoprom OR Rosenergoatom OR TVEL OR TENEX OR ASE) (Việt Nam OR Vietnam) (\"Ninh Thuận\" OR \"điện hạt nhân\" OR nuclear OR SMR OR \"nhiên liệu\" OR fuel OR EPC OR \"biên bản ghi nhớ\" OR MOU)"
           ]
         },
         {
@@ -168,7 +168,7 @@
       "queries": [
         "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
         "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")",
-        "(Rosatom OR Atomenergoprom OR Rosenergoatom OR TVEL OR TENEX OR ASE) (Việt Nam OR Vietnam) (điện hạt nhân OR nuclear OR SMR OR Ninh Thuận OR nhiên liệu OR fuel OR chất thải OR waste OR y học OR medicine OR điện gió OR wind OR lưu trữ OR storage OR Tuyến đường biển phía Bắc OR Northern Sea Route)",
+        "(Rosatom OR Atomenergoprom OR Rosenergoatom OR TVEL OR TENEX OR ASE) (Việt Nam OR Vietnam) (\"Ninh Thuận\" OR \"điện hạt nhân\" OR nuclear OR SMR OR \"nhiên liệu\" OR fuel OR EPC OR \"biên bản ghi nhớ\" OR MOU)",
         "(điện hạt nhân OR nuclear) (Việt Nam OR Vietnam) (chính sách OR policy OR SMR OR Ninh Thuận OR nhiên liệu OR fuel OR chất thải OR waste OR tháo dỡ OR decommissioning OR ý kiến công chúng OR public opinion)",
         "(năng lượng tái tạo OR renewable OR điện gió OR wind OR điện mặt trời OR solar OR lưu trữ OR storage OR y học hạt nhân OR nuclear medicine OR đồng vị OR isotopes OR logistics OR kinh tế biển OR blue economy) (Việt Nam OR Vietnam)"
       ]
