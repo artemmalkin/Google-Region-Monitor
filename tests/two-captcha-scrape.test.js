@@ -216,7 +216,7 @@ test('Scrape backend remains available in the normal monitoring UI', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'sidepanel.html'), 'utf8');
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'manifest.json'), 'utf8'));
   assert.match(html, /<option value="2captcha-scrape">2Captcha Scrape/);
-  assert.equal(manifest.version, '1.9.1');
+  assert.equal(manifest.version, '1.9.2');
   assert.match(source, /task_type: 'scrape'/);
   assert.match(source, /searchGoogleVia2CaptchaScrape/);
 });

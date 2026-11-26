@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-25T21:18:13.976Z",
+  "updatedAt": "2026-11-23T15:48:00.000Z",
   "profiles": [
     {
       "id": "argentina",
@@ -198,8 +198,14 @@
       "interfaceLang": "id",
       "resultLangs": "id",
       "region": "ID",
+      "queries": [
+        "(\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
+        "(\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
+        "(\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")",
+        "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
+        "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
+      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
-      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -215,19 +221,11 @@
           "name": "Росатом и его проекты",
           "queries": [
             "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
-            "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com",
-            "rosatom"
+            "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com"
           ]
         }
       ],
-      "queries": [
-        "(\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
-        "(\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
-        "(\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")",
-        "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
-        "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com",
-        "rosatom"
-      ]
+      "queryGroupsRevision": 2
     },
     {
       "id": "kitai",

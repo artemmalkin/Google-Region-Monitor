@@ -838,6 +838,61 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 
+function isGoogleGotoUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return url.protocol === 'https:' && url.hostname === 'www.google.com'
+      && url.pathname === '/goto' && Boolean(url.searchParams.get('url'));
+  } catch (_) {
+    return false;
+  }
+}
+
+async function resolveGoogleGotoLinksInReport(report) {
+  const resultItems = [];
+  for (const queryReport of report.queries || []) {
+    for (const page of queryReport.pages || []) {
+      for (const result of page.results || []) resultItems.push(result);
+    }
+  }
+  for (const item of (report.mediaFilterHiddenResults || report.mediaFilter?.hiddenResults || [])) {
+    if (item?.result) resultItems.push(item.result);
+  }
+
+  const uniqueUrls = [...new Set(resultItems.map((item) => String(item?.url || '')).filter(isGoogleGotoUrl))];
+  if (!uniqueUrls.length) return { total: 0, resolved: 0, unresolved: 0 };
+
+  const resolutions = new Map();
+  let nextIndex = 0;
+  const workerCount = Math.min(4, uniqueUrls.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextIndex < uniqueUrls.length) {
+      const sourceUrl = uniqueUrls[nextIndex++];
+      try {
+        const response = await chrome.runtime.sendMessage({ type: 'RESOLVE_GOOGLE_GOTO_URL', url: sourceUrl });
+        const destination = String(response?.url || '');
+        const parsed = new URL(destination);
+        if (response?.ok && ['http:', 'https:'].includes(parsed.protocol) && !isGoogleGotoUrl(destination)) {
+          resolutions.set(sourceUrl, parsed.href);
+        }
+      } catch (_) {
+        // A failed or unavailable redirect stays intact rather than guessing.
+      }
+    }
+  });
+  await Promise.all(workers);
+
+  for (const item of resultItems) {
+    const destination = resolutions.get(String(item?.url || ''));
+    if (destination) item.url = destination;
+  }
+  return {
+    total: uniqueUrls.length,
+    resolved: resolutions.size,
+    unresolved: uniqueUrls.length - resolutions.size
+  };
+}
+
 function createReportHtml(report) {
   const filter = report.mediaFilter || { status: 'skipped' };
   const filterSummary = filter.status === 'completed'
@@ -847,6 +902,10 @@ function createReportHtml(report) {
       : filter.status === 'disabled'
         ? `<p class="filter-summary"><b>Проверка региональности СМИ:</b> отключена пользователем; результаты включены без фильтрации ChatGPT.</p>`
         : `<p class="filter-summary"><b>Проверка региональности СМИ:</b> пропущена — ссылок для проверки нет.</p>`;
+  const gotoResolution = report.googleGotoResolution || { total: 0, resolved: 0, unresolved: 0 };
+  const gotoSummary = gotoResolution.total
+    ? `<p class=\"filter-summary\"><b>Ссылки Google /goto:</b> преобразовано ${Number(gotoResolution.resolved || 0)} из ${Number(gotoResolution.total || 0)} уникальных ссылок${gotoResolution.unresolved ? `; не удалось определить адрес для ${Number(gotoResolution.unresolved)} ссылок` : ''}.</p>`
+    : '';
   const rows = report.queries.map((queryReport) => {
     const pages = queryReport.pages.map((page, pageIndex) => {
       let pageNumber = pageIndex + 1;
@@ -870,7 +929,7 @@ function createReportHtml(report) {
 <style>
 :root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}.filter-summary{padding:10px 12px;background:#f1f5fb;border-radius:8px;font-size:12px}.filter-summary.warning{color:#8b1e1e;background:#fce8e6}.hidden-results{margin:18px 0;padding:14px 16px;background:#fff;border:1px solid #e3e6eb;border-radius:12px}.hidden-results summary{cursor:pointer;font-weight:700;color:#3c4043}.hidden-intro{font-size:12px;color:#687078}.hidden-result{padding:12px 0;border-top:1px dashed #e5e8ec}.exclusion-reason{padding:9px 11px;background:#fff7e6;border-radius:7px;font-size:12px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
-<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Передача настроек:</b> язык, страна и фильтр языка передаются прямо в ссылке поиска (hl, gl, lr)<br><b>Похожие результаты:</b> ${report.searchBackend === '2captcha' ? 'параметр filter=0 не используется в Google Search API' : report.searchBackend === '2captcha-scrape' ? 'параметр filter=0 передаётся в URL Google' : 'запрошено включение (filter=0)'}<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Источник выдачи:</b> ${report.searchBackend === '2captcha' ? '2Captcha Google Search API' : report.searchBackend === '2captcha-scrape' ? '2Captcha Scrape (HTML постранично)' : 'Браузер пользователя'}<br><b>Минимальный интервал Google:</b> ${report.searchBackend.startsWith('2captcha') ? 'не применяется; API-задания выполняются последовательно' : `${Number(report.googleSearchMinIntervalSeconds ?? 2)} сек.`}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : report.googleBlocked ? 'Google ограничил запросы; сохранены ранее собранные результаты' : 'Завершён'}</p>${filterSummary}</header>
+<header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Передача настроек:</b> язык, страна и фильтр языка передаются прямо в ссылке поиска (hl, gl, lr)<br><b>Похожие результаты:</b> ${report.searchBackend === '2captcha' ? 'параметр filter=0 не используется в Google Search API' : report.searchBackend === '2captcha-scrape' ? 'параметр filter=0 передаётся в URL Google' : 'запрошено включение (filter=0)'}<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Источник выдачи:</b> ${report.searchBackend === '2captcha' ? '2Captcha Google Search API' : report.searchBackend === '2captcha-scrape' ? '2Captcha Scrape (HTML постранично)' : 'Браузер пользователя'}<br><b>Минимальный интервал Google:</b> ${report.searchBackend.startsWith('2captcha') ? 'не применяется; API-задания выполняются последовательно' : `${Number(report.googleSearchMinIntervalSeconds ?? 2)} сек.`}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : report.googleBlocked ? 'Google ограничил запросы; сохранены ранее собранные результаты' : 'Завершён'}</p>${filterSummary}${gotoSummary}</header>
 ${rows}
 ${hiddenSection}
 <footer>Отчёт создан расширением Google Region Monitor. Ссылки на результаты открываются в новых вкладках.</footer></body></html>`;
@@ -2434,8 +2493,15 @@ $('run-report').addEventListener('click', async () => {
     if (isTwoCaptchaBackend) {
       addLog(`Завершено API-заданий: ${twoCaptchaRequestMeta.length}.`);
     }
+    addLog('Сбор Google завершён. Проверяю ссылки Google /goto и заменяю их адресами сайтов…');
+    report.googleGotoResolution = await resolveGoogleGotoLinksInReport(report);
+    if (report.googleGotoResolution.total) {
+      addLog(`Google /goto: преобразовано ${report.googleGotoResolution.resolved}/${report.googleGotoResolution.total}; без конечного адреса осталось ${report.googleGotoResolution.unresolved}.`);
+    } else {
+      addLog('Ссылок Google /goto нет; преобразование не требуется.');
+    }
     if (chatGPTFilterEnabled) {
-      addLog('Сбор Google завершён. Перед созданием HTML-отчёта проверяю региональную принадлежность СМИ через ChatGPT.');
+      addLog('Ссылки проверены. Перед созданием HTML-отчёта проверяю региональную принадлежность СМИ через ChatGPT.');
       report.mediaFilter = await filterReportLinksByRegionWithChatGPT(report, profile);
     } else {
       addLog('Сбор Google завершён. Проверка региональности через ChatGPT отключена пользователем; все результаты включаются в отчёт.');
@@ -2503,8 +2569,9 @@ $('run-report').addEventListener('click', async () => {
         ? `Google ограничил запросы. Отчёт сформирован по ранее собранным результатам: ${totalResults}.`
         : `Готово. HTML-отчёт сформирован: ${totalResults} результатов.`)
       + (incompleteApiPages ? ' 2Captcha вернул не все запрошенные страницы; номера отсутствующих страниц указаны в журнале и отчёте.' : '')
-      + filterMessage;
-    setStatus($('run-status'), reportMessage, (googleBlocked || incompleteApiPages || report.mediaFilter?.status === 'failed') ? 'error' : 'success');
+      + filterMessage
+      + (report.googleGotoResolution?.unresolved ? ` Не удалось преобразовать ${report.googleGotoResolution.unresolved} ссылок Google /goto; они оставлены без изменений.` : '');
+    setStatus($('run-status'), reportMessage, (googleBlocked || incompleteApiPages || report.mediaFilter?.status === 'failed' || report.googleGotoResolution?.unresolved > 0) ? 'error' : 'success');
     $('download-api-log').hidden = !isTwoCaptchaBackend || lastTwoCaptchaApiLog.length === 0;
   } catch (error) {
     setStatus($('run-status'), error.message || String(error), 'error');

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Google Region Monitor",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "Региональный мониторинг Google с браузерным поиском, 2Captcha Google Search API и Scrape (HTML), профилями и отчётами.",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -12,7 +12,8 @@
     "tabs",
     "downloads",
     "alarms",
-    "windows"
+    "windows",
+    "webRequest"
   ],
   "host_permissions": [
     "https://www.google.com/*",

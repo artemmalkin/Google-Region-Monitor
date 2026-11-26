@@ -17,10 +17,11 @@ function extractFunction(startMarker, endMarker, returnName) {
   return new Function(`${source.slice(start, end)}\nreturn ${returnName};`)();
 }
 
-test('release version and manifest are prepared for v1.9.1', () => {
-  assert.equal(manifest.version, '1.9.1');
+test('release version and manifest are prepared for v1.9.2', () => {
+  assert.equal(manifest.version, '1.9.2');
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.permissions.includes('clipboardWrite'), false);
+  assert.equal(manifest.permissions.includes('webRequest'), true);
   assert.match(manifest.description, /Google Search API/);
 });
 

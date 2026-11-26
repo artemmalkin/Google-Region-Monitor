@@ -1,4 +1,12 @@
-# GitHub update instructions — v1.9.1
+# GitHub update instructions — v1.9.2
+
+## 1.9.2 — resolve Google /goto result links
+
+- Detects new `https://www.google.com/goto?url=...` organic result links.
+- Resolves each unique token using a GET request with manual redirect handling and reads the destination from the HTTP `Location` header. The destination site itself is not loaded.
+- Direct URLs are applied before ChatGPT region filtering and HTML report generation, including hidden-result entries.
+- Unresolved tokens remain unchanged and are counted in the report/log instead of being guessed from display breadcrumbs.
+- Adds the `webRequest` permission and observes only `https://www.google.com/goto*` redirects.
 
 ## 1.9.1 — release cleanup, one-task Google Search pagination, and billing statistics
 

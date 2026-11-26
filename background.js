@@ -6,6 +6,15 @@ const GOOGLE_SEARCH_LAST_REQUEST_SETTING = 'googleSearchLastRequestAt';
 let googleSearchRateLimitQueue = Promise.resolve();
 let googleSearchLastRequestAtInMemory = 0;
 const googleSearchSlotStates = new Map();
+const pendingGoogleGotoResolutions = new Map();
+
+// Google /goto tokens are opaque. Capture the first redirect target without
+// following it, so the extension never loads the destination page itself.
+if (chrome.webRequest?.onBeforeRedirect) {
+  chrome.webRequest.onBeforeRedirect.addListener((details) => {
+    pendingGoogleGotoResolutions.get(details.url)?.finish(details.redirectUrl || '');
+  }, { urls: ['https://www.google.com/goto*'] });
+}
 
 chrome.runtime.onInstalled.addListener(async () => {
   await configureSidePanel();
@@ -21,6 +30,16 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === STANDARD_SYNC_ALARM) syncStandardProfiles(false).catch(() => {});
 });
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'RESOLVE_GOOGLE_GOTO_URL') {
+    if (sender.id !== chrome.runtime.id) {
+      sendResponse({ ok: false, error: 'Запрос преобразования ссылки отклонён.' });
+      return false;
+    }
+    resolveGoogleGotoUrl(message.url)
+      .then((url) => sendResponse({ ok: true, url }))
+      .catch((error) => sendResponse({ ok: false, error: error?.message || String(error) }));
+    return true;
+  }
   if (message?.type === 'SYNC_STANDARD_PROFILES') {
     syncStandardProfiles(!!message.force).then(sendResponse).catch((error) => sendResponse({ ok: false, error: error.message || String(error) }));
     return true;
@@ -60,6 +79,66 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return false;
 });
+
+function normalizeGoogleGotoDestination(destination, sourceUrl) {
+  try {
+    const target = new URL(String(destination || ''), sourceUrl);
+    if (!['http:', 'https:'].includes(target.protocol)) return '';
+    if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && /^\/(goto|url|aclk)(\/|\?|$)/i.test(target.pathname)) return '';
+    return target.href;
+  } catch (_) {
+    return '';
+  }
+}
+
+async function resolveGoogleGotoUrl(rawUrl) {
+  let parsed;
+  try { parsed = new URL(String(rawUrl || '')); }
+  catch (_) { throw new Error('Некорректная Google /goto ссылка.'); }
+  if (parsed.protocol !== 'https:' || parsed.hostname !== 'www.google.com'
+    || parsed.pathname !== '/goto' || !parsed.searchParams.get('url')) {
+    throw new Error('Разрешены только ссылки Google /goto.');
+  }
+
+  const sourceUrl = parsed.href;
+  return new Promise((resolve) => {
+    let settled = false;
+    let graceTimer = null;
+    const timeout = setTimeout(() => finish(''), 9000);
+    const finish = (destination) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (graceTimer !== null) clearTimeout(graceTimer);
+      pendingGoogleGotoResolutions.delete(sourceUrl);
+      resolve(normalizeGoogleGotoDestination(destination, sourceUrl));
+    };
+    pendingGoogleGotoResolutions.set(sourceUrl, { finish });
+
+    // Manual redirect mode avoids requesting the publisher's page. The
+    // webRequest listener above reads Location even when Fetch hides it.
+    fetch(sourceUrl, {
+      method: 'GET',
+      redirect: 'manual',
+      cache: 'no-store',
+      credentials: 'include',
+      referrer: 'https://www.google.com/search'
+    }).then((response) => {
+      if (settled) return;
+      const location = response.headers?.get?.('location');
+      if (location) {
+        finish(location);
+        return;
+      }
+      // Normally onBeforeRedirect fires before fetch settles. Keep a short
+      // grace period for Chromium's event delivery before marking unresolved.
+      graceTimer = setTimeout(() => finish(''), 800);
+    }).catch(() => {
+      if (settled) return;
+      graceTimer = setTimeout(() => finish(''), 800);
+    });
+  });
+}
 
 async function reserveGoogleSearchSlot(state, tabId, url) {
   if (state.cancelled) return { ok: false, cancelled: true };
