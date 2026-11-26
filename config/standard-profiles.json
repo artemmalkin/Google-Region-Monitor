@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T14:54:12.458Z",
+  "updatedAt": "2026-11-26T15:16:38.596Z",
   "profiles": [
     {
       "id": "argentina",
@@ -215,30 +215,30 @@
       "queryGroups": [
         {
           "id": "main",
-          "name": "Основные запросы",
+          "name": "Росатом и его проекты",
           "queries": [
-            "(\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
-            "(\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
-            "(\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")"
+            "Rosatom PLTN reaktor modular kecil"
           ]
         },
         {
           "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
+          "name": "Конкуренты Росатома",
           "queries": [
-            "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
-            "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com",
-            "rosatom"
+            "EDF OR Westinghouse OR KHNP OR CNNC"
+          ]
+        },
+        {
+          "id": "mwxp34qk-lqkj6bz",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "PLTN reaktor modular kecil limbah radioaktif"
           ]
         }
       ],
       "queries": [
-        "(\"energi nuklir\" OR PLTN OR SMR OR \"siklus bahan bakar\" OR \"limbah radioaktif\" OR \"opini publik\" OR \"kebijakan energi nuklir\")",
-        "(\"kedokteran nuklir\" OR radioisotop OR isotop OR MCO OR MCL OR \"teknologi aditif\" OR \"pencetakan 3D\" OR \"additive manufacturing\")",
-        "(\"Northern Sea Route\" OR Arktik OR kontainer OR \"logistik internasional\" OR \"ekonomi biru\" OR \"blue economy\" OR \"penyimpanan energi\" OR \"battery storage\")",
-        "(Rosatom OR Росатом OR TVEL) Indonesia -site:.ru",
-        "\"rosatom\" -site:x.com -site:threads.com -site:.ru -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com",
-        "rosatom"
+        "Rosatom PLTN reaktor modular kecil",
+        "EDF OR Westinghouse OR KHNP OR CNNC",
+        "PLTN reaktor modular kecil limbah radioaktif"
       ]
     },
     {
