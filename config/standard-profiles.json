@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T05:08:54.405Z",
+  "updatedAt": "2026-11-26T05:51:58.956Z",
   "profiles": [
     {
       "id": "argentina",
@@ -237,13 +237,8 @@
       "interfaceLang": "zh-CN",
       "resultLangs": "zh-CN",
       "region": "HK",
-      "queries": [
-        "(核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
-        "(\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")",
-        "(Rosatom OR Росатом OR 中国) China -site:.ru",
-        "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "main",
@@ -258,11 +253,18 @@
           "name": "Росатом и его проекты",
           "queries": [
             "(Rosatom OR Росатом OR 中国) China -site:.ru",
-            "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
+            "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru",
+            "rosatom"
           ]
         }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "(核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
+        "(\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")",
+        "(Rosatom OR Росатом OR 中国) China -site:.ru",
+        "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru",
+        "rosatom"
+      ]
     },
     {
       "id": "cuba",
