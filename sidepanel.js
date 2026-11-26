@@ -848,6 +848,92 @@ function isGoogleGotoUrl(value) {
   }
 }
 
+// A result may contain a direct destination in a structured API field even
+// when its primary `url` field is a Google /goto token. Prefer those direct
+// fields before issuing any network request to Google.
+function normalizeDirectGoogleResultUrl(value, baseUrl) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const isAbsoluteHttpUrl = /^https?:\/\//i.test(raw);
+  let target;
+  try { target = new URL(raw, baseUrl || 'https://www.google.com/'); }
+  catch (_) { return ''; }
+  if (!['http:', 'https:'].includes(target.protocol)) return '';
+
+  const isGoogleHost = /(^|\.)google\.[a-z.]+$/i.test(target.hostname);
+  if (isGoogleHost && target.pathname === '/url') {
+    const nested = target.searchParams.get('q') || target.searchParams.get('url') || '';
+    if (nested && nested !== raw) return normalizeDirectGoogleResultUrl(nested, baseUrl);
+  }
+  // Do not turn an opaque token such as CAES... into a fake relative
+  // https://www.google.com/CAES... URL. Non-absolute values are accepted only
+  // for the legacy Google /url wrapper handled immediately above.
+  if (!isAbsoluteHttpUrl) return '';
+  if (isGoogleHost && /^\/(goto|url|aclk|search|preferences|sorry)(\/|\?|$)/i.test(target.pathname)) return '';
+  return target.href;
+}
+
+function getDirectGoogleResultUrlFromItem(item, baseUrl) {
+  const fields = [
+    'url', 'link', 'href', 'target_url', 'targetUrl', 'destination_url', 'destinationUrl',
+    'destination', 'original_url', 'originalUrl', 'final_url', 'finalUrl', 'resolved_url',
+    'resolvedUrl', 'redirect_url', 'redirectUrl', 'web_url', 'webUrl', 'result_url', 'resultUrl',
+    'landing_url', 'landingUrl', 'article_url', 'articleUrl', 'link_url', 'linkUrl',
+    'page_url', 'pageUrl', 'canonical_url', 'canonicalUrl', 'resolved_link', 'resolvedLink'
+  ];
+  for (const field of fields) {
+    const value = item?.[field];
+    const candidates = typeof value === 'string'
+      ? [value]
+      : value && typeof value === 'object'
+        ? [value.url, value.href, value.uri, value.value]
+        : [];
+    for (const candidate of candidates) {
+      const direct = normalizeDirectGoogleResultUrl(candidate, baseUrl);
+      if (direct) return direct;
+    }
+  }
+  return '';
+}
+
+function getDirectGoogleResultUrlFromAnchor(anchor, baseUrl) {
+  if (!anchor) return '';
+  for (const attribute of ['data-url', 'data-href', 'data-link', 'data-dest', 'data-dest-url', 'data-target-url', 'data-original-url', 'data-original-href', 'data-lpage']) {
+    const direct = normalizeDirectGoogleResultUrl(anchor.getAttribute?.(attribute), baseUrl);
+    if (direct) return direct;
+  }
+
+  // Some Google markup stores the destination in the click-measurement ping.
+  // In the current /goto format that parameter is still opaque, so it is only
+  // accepted when it really contains an ordinary HTTP(S) URL.
+  const ping = anchor.getAttribute?.('ping');
+  if (ping) {
+    try {
+      const pingUrl = new URL(ping, baseUrl || 'https://www.google.com/');
+      for (const name of ['url', 'q', 'adurl']) {
+        const direct = normalizeDirectGoogleResultUrl(pingUrl.searchParams.get(name), baseUrl);
+        if (direct) return direct;
+      }
+    } catch (_) { /* Ignore malformed click-measurement metadata. */ }
+  }
+
+  return normalizeDirectGoogleResultUrl(anchor.getAttribute?.('href') || anchor.href, baseUrl);
+}
+
+function getGoogleDisplayUrlMetadata(value) {
+  const displayUrl = String(value || '').replace(/\s+/g, ' ').trim();
+  const match = displayUrl.match(/https?:\/\/[^\s›»]+/i);
+  if (!match) return { displayUrl, siteUrlHint: '' };
+  const domainUrl = normalizeDirectGoogleResultUrl(match[0], 'https://www.google.com/');
+  if (!domainUrl) return { displayUrl, siteUrlHint: '' };
+  try {
+    const parsed = new URL(domainUrl);
+    return { displayUrl, siteUrlHint: `${parsed.origin}/` };
+  } catch (_) {
+    return { displayUrl, siteUrlHint: '' };
+  }
+}
+
 async function resolveGoogleGotoLinksInReport(report) {
   const resultItems = [];
   for (const queryReport of report.queries || []) {
@@ -859,15 +945,58 @@ async function resolveGoogleGotoLinksInReport(report) {
     if (item?.result) resultItems.push(item.result);
   }
 
-  const uniqueUrls = [...new Set(resultItems.map((item) => String(item?.url || '')).filter(isGoogleGotoUrl))];
-  if (!uniqueUrls.length) return { total: 0, resolved: 0, unresolved: 0 };
+  const sourceTokens = new Set();
+  const directBySource = new Map();
+  const directJsonUrls = new Set();
+  const directHtmlUrls = new Set();
+  const itemsBySource = new Map();
 
+  for (const item of resultItems) {
+    const currentUrl = String(item?.url || '');
+    const sourceUrl = String(item?.googleGotoSourceUrl || (isGoogleGotoUrl(currentUrl) ? currentUrl : ''));
+    if (sourceUrl && isGoogleGotoUrl(sourceUrl)) {
+      sourceTokens.add(sourceUrl);
+      if (!itemsBySource.has(sourceUrl)) itemsBySource.set(sourceUrl, []);
+      itemsBySource.get(sourceUrl).push(item);
+      if (currentUrl && !isGoogleGotoUrl(currentUrl)) {
+        const parsed = (() => { try { return new URL(currentUrl); } catch (_) { return null; } })();
+        if (parsed && ['http:', 'https:'].includes(parsed.protocol)) {
+          const existing = directBySource.get(sourceUrl);
+          if (!existing || item.urlSource === '2captcha-json' || item.urlSource === '2captcha-html') {
+            directBySource.set(sourceUrl, { url: parsed.href, source: item.urlSource || 'direct' });
+          }
+        }
+      }
+    }
+
+    if (!currentUrl || isGoogleGotoUrl(currentUrl)) continue;
+    let parsed;
+    try { parsed = new URL(currentUrl); } catch (_) { continue; }
+    if (!['http:', 'https:'].includes(parsed.protocol)) continue;
+    if (item.urlSource === '2captcha-json') directJsonUrls.add(parsed.href);
+    if (item.urlSource === '2captcha-html') directHtmlUrls.add(parsed.href);
+  }
+
+  // If HTML or structured JSON already supplied a direct address for a token,
+  // apply it to every duplicate result and skip the Google network request.
+  for (const [sourceUrl, direct] of directBySource.entries()) {
+    for (const item of itemsBySource.get(sourceUrl) || []) {
+      if (isGoogleGotoUrl(item.url)) {
+        item.url = direct.url;
+        item.urlSource = direct.source;
+      }
+    }
+  }
+
+  const fallbackUrls = [...new Set(resultItems
+    .map((item) => String(item?.url || ''))
+    .filter(isGoogleGotoUrl))];
   const resolutions = new Map();
   let nextIndex = 0;
-  const workerCount = Math.min(4, uniqueUrls.length);
+  const workerCount = Math.min(4, fallbackUrls.length);
   const workers = Array.from({ length: workerCount }, async () => {
-    while (nextIndex < uniqueUrls.length) {
-      const sourceUrl = uniqueUrls[nextIndex++];
+    while (nextIndex < fallbackUrls.length) {
+      const sourceUrl = fallbackUrls[nextIndex++];
       try {
         const response = await chrome.runtime.sendMessage({ type: 'RESOLVE_GOOGLE_GOTO_URL', url: sourceUrl });
         const destination = String(response?.url || '');
@@ -883,13 +1012,29 @@ async function resolveGoogleGotoLinksInReport(report) {
   await Promise.all(workers);
 
   for (const item of resultItems) {
-    const destination = resolutions.get(String(item?.url || ''));
-    if (destination) item.url = destination;
+    const currentUrl = String(item?.url || '');
+    const destination = isGoogleGotoUrl(currentUrl) ? resolutions.get(currentUrl) : '';
+    if (destination) {
+      item.url = destination;
+      item.urlSource = 'google-redirect';
+    }
   }
+
+  const resolvedTokens = new Set([...directBySource.keys(), ...resolutions.keys()]);
+  const unresolvedTokens = [...sourceTokens].filter((token) => !resolvedTokens.has(token));
+  const domainHintTokens = new Set();
+  for (const token of unresolvedTokens) {
+    if ((itemsBySource.get(token) || []).some((item) => Boolean(item?.siteUrlHint))) domainHintTokens.add(token);
+  }
+
   return {
-    total: uniqueUrls.length,
-    resolved: resolutions.size,
-    unresolved: uniqueUrls.length - resolutions.size
+    total: sourceTokens.size,
+    resolved: resolvedTokens.size,
+    unresolved: unresolvedTokens.length,
+    fromJson: directJsonUrls.size,
+    fromHtml: directHtmlUrls.size,
+    fromRedirect: resolutions.size,
+    domainHints: domainHintTokens.size
   };
 }
 
@@ -902,10 +1047,17 @@ function createReportHtml(report) {
       : filter.status === 'disabled'
         ? `<p class="filter-summary"><b>Проверка региональности СМИ:</b> отключена пользователем; результаты включены без фильтрации ChatGPT.</p>`
         : `<p class="filter-summary"><b>Проверка региональности СМИ:</b> пропущена — ссылок для проверки нет.</p>`;
-  const gotoResolution = report.googleGotoResolution || { total: 0, resolved: 0, unresolved: 0 };
-  const gotoSummary = gotoResolution.total
-    ? `<p class=\"filter-summary\"><b>Ссылки Google /goto:</b> преобразовано ${Number(gotoResolution.resolved || 0)} из ${Number(gotoResolution.total || 0)} уникальных ссылок${gotoResolution.unresolved ? `; не удалось определить адрес для ${Number(gotoResolution.unresolved)} ссылок` : ''}.</p>`
+  const gotoResolution = report.googleGotoResolution || { total: 0, resolved: 0, unresolved: 0, fromJson: 0, fromHtml: 0, fromRedirect: 0, domainHints: 0 };
+  const gotoSummary = gotoResolution.total || gotoResolution.fromJson || gotoResolution.fromHtml
+    ? `<p class=\"filter-summary\"><b>Ссылки Google /goto:</b> прямых URL из JSON 2captcha — ${Number(gotoResolution.fromJson || 0)}; из HTML — ${Number(gotoResolution.fromHtml || 0)}; получено через перенаправление Google — ${Number(gotoResolution.fromRedirect || 0)}; не разрешено — ${Number(gotoResolution.unresolved || 0)} из ${Number(gotoResolution.total || 0)}. Для ${Number(gotoResolution.domainHints || 0)} неразрешённых ссылок найден домен сайта (это подсказка, а не точная ссылка на статью).</p>`
     : '';
+  const resultUrlMarkup = (result) => {
+    const url = String(result?.url || '');
+    const hint = isGoogleGotoUrl(url) && result?.siteUrlHint
+      ? `<div class=\"url-hint\">Домен из HTML Google (не точная ссылка): <a href=\"${escapeHtml(result.siteUrlHint)}\" target=\"_blank\" rel=\"noopener noreferrer\">${escapeHtml(result.displayUrl || result.siteUrlHint)}</a></div>`
+      : '';
+    return `<div class=\"url\"><a href=\"${escapeHtml(url)}\" target=\"_blank\" rel=\"noopener noreferrer\">${escapeHtml(url)}</a>${hint}</div>`;
+  };
   const rows = report.queries.map((queryReport) => {
     const pages = queryReport.pages.map((page, pageIndex) => {
       let pageNumber = pageIndex + 1;
@@ -914,7 +1066,7 @@ function createReportHtml(report) {
         <article class="result">
           <div class="result-number">${index + 1}. Страница ${pageNumber}</div>
           <h3><a href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(result.title)}</a></h3>
-          <div class="url"><a href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(result.url)}</a></div>
+          ${resultUrlMarkup(result)}
           <p>${escapeHtml(result.snippet)}</p>
         </article>`).join('');
       return `<section class="page"><h3>Страница ${pageNumber}</h3><p class="meta">${escapeHtml(page.totalText || page.url)}</p>${resultCards || '<p>Результаты не найдены или не распознаны.</p>'}</section>`;
@@ -922,12 +1074,12 @@ function createReportHtml(report) {
     return `<section class="query"><h2>Запрос: ${escapeHtml(queryReport.query)}</h2>${queryReport.error ? `<p class="warning">${escapeHtml(queryReport.error)}</p>` : ''}${pages}</section>`;
   }).join('');
   const hiddenItems = report.mediaFilterHiddenResults || report.mediaFilter?.hiddenResults || [];
-  const hiddenRows = hiddenItems.map((item, index) => `<article class="result hidden-result"><div class="result-number">${index + 1}. Скрытый результат · запрос: ${escapeHtml(item.query || '—')} · страница ${Number(item.pageIndex || 1)}</div><h3><a href="${escapeHtml(item.result?.url || '')}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.result?.title || item.result?.url || 'Без названия')}</a></h3><div class="url"><a href="${escapeHtml(item.result?.url || '')}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.result?.url || '')}</a></div><p>${escapeHtml(item.result?.snippet || '')}</p><p class="exclusion-reason"><b>Объяснение ChatGPT:</b> ${escapeHtml(item.reason || 'Причина не указана.')}</p></article>`).join('');
+  const hiddenRows = hiddenItems.map((item, index) => `<article class="result hidden-result"><div class="result-number">${index + 1}. Скрытый результат · запрос: ${escapeHtml(item.query || '—')} · страница ${Number(item.pageIndex || 1)}</div><h3><a href="${escapeHtml(item.result?.url || '')}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.result?.title || item.result?.url || 'Без названия')}</a></h3>${resultUrlMarkup(item.result || {})}<p>${escapeHtml(item.result?.snippet || '')}</p><p class="exclusion-reason"><b>Объяснение ChatGPT:</b> ${escapeHtml(item.reason || 'Причина не указана.')}</p></article>`).join('');
   const hiddenSection = hiddenItems.length ? `<details class="hidden-results"><summary>Показать скрытые результаты ChatGPT (${hiddenItems.length})</summary><p class="hidden-intro">Эти ссылки исключены из основного списка. Здесь сохранены исходные результаты и объяснения ChatGPT.</p>${hiddenRows}</details>` : '';
   return `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Google Search Report — ${escapeHtml(report.profile.name)}</title>
 <style>
-:root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}.filter-summary{padding:10px 12px;background:#f1f5fb;border-radius:8px;font-size:12px}.filter-summary.warning{color:#8b1e1e;background:#fce8e6}.hidden-results{margin:18px 0;padding:14px 16px;background:#fff;border:1px solid #e3e6eb;border-radius:12px}.hidden-results summary{cursor:pointer;font-weight:700;color:#3c4043}.hidden-intro{font-size:12px;color:#687078}.hidden-result{padding:12px 0;border-top:1px dashed #e5e8ec}.exclusion-reason{padding:9px 11px;background:#fff7e6;border-radius:7px;font-size:12px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
+:root{font-family:Arial,Helvetica,sans-serif;color:#202124;background:#f7f8fa}body{margin:0;padding:28px;max-width:1100px;margin-inline:auto}header{padding:22px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin-bottom:22px}h1{font-size:24px;margin:0 0 10px}h2{font-size:19px;margin:0 0 14px}h3{font-size:15px;margin:6px 0}p{line-height:1.5}.meta,.url{font-size:12px;color:#687078;overflow-wrap:anywhere}.url-hint{margin-top:4px;color:#7a5a16;font-size:11px}.query{padding:18px;background:#fff;border:1px solid #e3e6eb;border-radius:14px;margin:16px 0}.page{border-top:1px solid #e9ecef;padding-top:12px;margin-top:14px}.result{padding:12px 0;border-top:1px dashed #e5e8ec}.result:first-of-type{border-top:0}.result-number{font-size:11px;color:#687078}.result a{color:#1558b0;text-decoration:none}.result a:hover{text-decoration:underline}.result p{margin:7px 0}.warning{color:#a50e0e;background:#fce8e6;padding:10px;border-radius:8px}.filter-summary{padding:10px 12px;background:#f1f5fb;border-radius:8px;font-size:12px}.filter-summary.warning{color:#8b1e1e;background:#fce8e6}.hidden-results{margin:18px 0;padding:14px 16px;background:#fff;border:1px solid #e3e6eb;border-radius:12px}.hidden-results summary{cursor:pointer;font-weight:700;color:#3c4043}.hidden-intro{font-size:12px;color:#687078}.hidden-result{padding:12px 0;border-top:1px dashed #e5e8ec}.exclusion-reason{padding:9px 11px;background:#fff7e6;border-radius:7px;font-size:12px}footer{color:#687078;font-size:11px;margin-top:20px}@media print{body{padding:0;background:#fff}.query,header{break-inside:avoid}}
 </style></head><body>
 <header><h1>Отчёт мониторинга Google</h1><p><b>Профиль:</b> ${escapeHtml(report.profile.name)}<br><b>Язык интерфейса:</b> ${escapeHtml(report.profile.interfaceLang || 'не задан')}<br><b>Языки результатов:</b> ${escapeHtml(report.profile.resultLangs || 'без фильтра')}<br><b>Регион:</b> ${escapeHtml(report.profile.region || 'по умолчанию')}<br><b>Передача настроек:</b> язык, страна и фильтр языка передаются прямо в ссылке поиска (hl, gl, lr)<br><b>Похожие результаты:</b> ${report.searchBackend === '2captcha' ? 'параметр filter=0 не используется в Google Search API' : report.searchBackend === '2captcha-scrape' ? 'параметр filter=0 передаётся в URL Google' : 'запрошено включение (filter=0)'}<br><b>Период:</b> ${escapeHtml(report.periodLabel)}<br><b>Источник выдачи:</b> ${report.searchBackend === '2captcha' ? '2Captcha Google Search API' : report.searchBackend === '2captcha-scrape' ? '2Captcha Scrape (HTML постранично)' : 'Браузер пользователя'}<br><b>Минимальный интервал Google:</b> ${report.searchBackend.startsWith('2captcha') ? 'не применяется; API-задания выполняются последовательно' : `${Number(report.googleSearchMinIntervalSeconds ?? 2)} сек.`}<br><b>Создан:</b> ${escapeHtml(report.createdAt)}<br><b>Выбрано запросов:</b> ${report.selectedQueryCount || report.queries.length}<br><b>Запросов начато:</b> ${report.queries.length}<br><b>Статус:</b> ${report.stoppedByUser ? 'Остановлен пользователем; включены уже собранные результаты' : report.googleBlocked ? 'Google ограничил запросы; сохранены ранее собранные результаты' : 'Завершён'}</p>${filterSummary}${gotoSummary}</header>
 ${rows}
@@ -1739,11 +1891,28 @@ async function searchGoogleVia2Captcha(url, apiKey, maxPages, apiLog = []) {
         : (calculatedPage || pageStart);
       if (pageNumber < pageStart || pageNumber > pageEnd) return;
       if (!grouped.has(pageNumber)) grouped.set(pageNumber, []);
+
+      const rawUrl = String(item?.url || '');
+      let absoluteRawUrl = '';
+      try { absoluteRawUrl = new URL(rawUrl, pageBaseUrl).href; } catch (_) { /* Omit invalid links. */ }
+      const directUrl = getDirectGoogleResultUrlFromItem(item, pageBaseUrl);
+      const url = directUrl || absoluteRawUrl;
+      const googleGotoSourceUrl = isGoogleGotoUrl(absoluteRawUrl) ? absoluteRawUrl : '';
+      const displayMetadata = getGoogleDisplayUrlMetadata(
+        item?.display_url || item?.displayUrl || item?.displayed_url || item?.breadcrumb || ''
+      );
+      let directHostname = '';
+      if (directUrl) {
+        try { directHostname = new URL(directUrl).hostname; } catch (_) { /* Keep empty. */ }
+      }
       grouped.get(pageNumber).push({
         title: String(item?.title || ''),
-        url: String(item?.url || ''),
-        snippet: String(item?.description || ''),
-        displayUrl: (() => { try { return new URL(item.url).hostname; } catch (_) { return ''; } })(),
+        url,
+        snippet: String(item?.description || item?.snippet || ''),
+        displayUrl: displayMetadata.displayUrl || directHostname,
+        siteUrlHint: displayMetadata.siteUrlHint,
+        urlSource: directUrl ? '2captcha-json' : '',
+        googleGotoSourceUrl,
         _position: pagePosition || (absolutePosition > 0 ? ((absolutePosition - 1) % 10) + 1 : index + 1)
       });
     });
@@ -1780,28 +1949,30 @@ async function searchGoogleVia2Captcha(url, apiKey, maxPages, apiLog = []) {
     for (const heading of headings) {
       const anchor = heading.closest('a[href]') || heading.querySelector('a[href]');
       if (!anchor) continue;
-      let target;
-      try { target = new URL(anchor.getAttribute('href') || anchor.href, pageBaseUrl); } catch (_) { continue; }
-      if (!/^https?:$/.test(target.protocol)) continue;
-      if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && target.pathname === '/url') {
-        const destination = target.searchParams.get('q') || target.searchParams.get('url');
-        if (destination && /^https?:\/\//i.test(destination)) {
-          try { target = new URL(destination); } catch (_) { /* Keep the Google redirect. */ }
-        }
-      }
-      if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && /\/(search|preferences|aclk|sorry)(\/|\?|$)/i.test(target.pathname)) continue;
-      if (target.hostname === 'translate.google.com' || target.hostname.endsWith('.googleusercontent.com')) continue;
-      if (seenUrls.has(target.href)) continue;
-      seenUrls.add(target.href);
+      let rawTarget;
+      try { rawTarget = new URL(anchor.getAttribute('href') || anchor.href, pageBaseUrl); } catch (_) { continue; }
+      if (!['http:', 'https:'].includes(rawTarget.protocol)) continue;
+      const directUrl = getDirectGoogleResultUrlFromAnchor(anchor, pageBaseUrl);
+      const targetUrl = directUrl || rawTarget.href;
+      const googleGotoSourceUrl = isGoogleGotoUrl(rawTarget.href) ? rawTarget.href : '';
+      if (!directUrl && /(^|\.)google\.[a-z.]+$/i.test(rawTarget.hostname)
+        && /\/(search|preferences|aclk|sorry)(\/|\?|$)/i.test(rawTarget.pathname)) continue;
+      if (rawTarget.hostname === 'translate.google.com' || rawTarget.hostname.endsWith('.googleusercontent.com')) continue;
+      if (seenUrls.has(targetUrl)) continue;
+      seenUrls.add(targetUrl);
       const block = heading.closest('.MjjYud, .g, [data-sokoban-container]') || anchor.closest('.MjjYud, .g, [data-sokoban-container]') || heading.parentElement;
       const snippetNode = block?.querySelector?.('.VwiC3b, .yXK7lf, .GI74Re, .ITZIwc, .IsZvec, [data-sncf], .aCOpRe');
       const snippet = clean(snippetNode?.innerText || snippetNode?.textContent || '');
       const cite = block?.querySelector?.('cite');
+      const displayMetadata = getGoogleDisplayUrlMetadata(cite?.innerText || cite?.textContent || '');
       results.push({
         title: clean(heading.innerText || heading.textContent),
-        url: target.href,
+        url: targetUrl,
         snippet: snippet.slice(0, 1800),
-        displayUrl: clean(cite?.innerText || cite?.textContent || target.hostname),
+        displayUrl: displayMetadata.displayUrl || (directUrl ? new URL(directUrl).hostname : ''),
+        siteUrlHint: displayMetadata.siteUrlHint,
+        urlSource: directUrl ? '2captcha-html' : '',
+        googleGotoSourceUrl,
         _position: results.length + 1
       });
     }
@@ -1810,17 +1981,40 @@ async function searchGoogleVia2Captcha(url, apiKey, maxPages, apiLog = []) {
 
   function mergeHtmlPage(pageNumber, htmlResults, payload, pageBaseUrl, htmlWasReceived) {
     const existing = pagesByNumber.get(pageNumber);
-    const combined = [];
-    const seenUrls = new Set();
-    const seenTitles = new Set();
-    for (const item of [...(existing?.results || []), ...htmlResults]) {
-      const urlKey = String(item.url || '').trim().toLowerCase();
-      const titleKey = String(item.title || '').trim().toLowerCase();
-      if ((urlKey && seenUrls.has(urlKey)) || (titleKey && seenTitles.has(titleKey))) continue;
-      if (urlKey) seenUrls.add(urlKey);
-      if (titleKey) seenTitles.add(titleKey);
-      combined.push({ ...item, _position: combined.length + 1 });
+    const combined = (existing?.results || []).map((item) => ({ ...item }));
+    const cleanKey = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+    for (const incoming of htmlResults) {
+      const incomingUrl = String(incoming.url || '').trim().toLowerCase();
+      const incomingTitle = cleanKey(incoming.title);
+      const matchIndex = combined.findIndex((current) => {
+        const currentUrl = String(current.url || '').trim().toLowerCase();
+        const currentTitle = cleanKey(current.title);
+        return (incomingUrl && currentUrl === incomingUrl)
+          || (incomingTitle && currentTitle === incomingTitle);
+      });
+      if (matchIndex === -1) {
+        combined.push({ ...incoming, _position: combined.length + 1 });
+        continue;
+      }
+
+      const current = combined[matchIndex];
+      const currentIsGoto = isGoogleGotoUrl(current.url);
+      const incomingIsGoto = isGoogleGotoUrl(incoming.url);
+      const useIncomingUrl = currentIsGoto && !incomingIsGoto;
+      combined[matchIndex] = {
+        ...current,
+        ...incoming,
+        url: useIncomingUrl ? incoming.url : current.url,
+        urlSource: useIncomingUrl ? incoming.urlSource : (current.urlSource || incoming.urlSource || ''),
+        googleGotoSourceUrl: current.googleGotoSourceUrl || incoming.googleGotoSourceUrl || (currentIsGoto ? current.url : ''),
+        displayUrl: incoming.displayUrl || current.displayUrl || '',
+        siteUrlHint: incoming.siteUrlHint || current.siteUrlHint || '',
+        snippet: current.snippet || incoming.snippet || '',
+        _position: current._position || incoming._position || matchIndex + 1
+      };
     }
+
     if (existing || htmlWasReceived) {
       pagesByNumber.set(pageNumber, pageFromItems(pageNumber, combined, payload, pageBaseUrl));
     }
@@ -2117,27 +2311,29 @@ async function searchGoogleVia2CaptchaScrape(url, apiKey, maxPages, apiLog = [])
     for (const heading of headings) {
       const anchor = heading.closest('a[href]') || heading.querySelector('a[href]');
       if (!anchor) continue;
-      let target;
-      try { target = new URL(anchor.getAttribute('href') || anchor.href, pageUrl); } catch (_) { continue; }
-      if (!/^https?:$/.test(target.protocol)) continue;
-      if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && target.pathname === '/url') {
-        const destination = target.searchParams.get('q') || target.searchParams.get('url');
-        if (destination && /^https?:\/\//i.test(destination)) {
-          try { target = new URL(destination); } catch (_) { /* Keep original URL. */ }
-        }
-      }
-      if (/(^|\.)google\.[a-z.]+$/i.test(target.hostname) && /\/(search|preferences|aclk|sorry)(\/|\?|$)/i.test(target.pathname)) continue;
-      if (target.hostname === 'translate.google.com' || target.hostname.endsWith('.googleusercontent.com')) continue;
-      if (seenUrls.has(target.href)) continue;
-      seenUrls.add(target.href);
+      let rawTarget;
+      try { rawTarget = new URL(anchor.getAttribute('href') || anchor.href, pageUrl); } catch (_) { continue; }
+      if (!['http:', 'https:'].includes(rawTarget.protocol)) continue;
+      const directUrl = getDirectGoogleResultUrlFromAnchor(anchor, pageUrl);
+      const targetUrl = directUrl || rawTarget.href;
+      const googleGotoSourceUrl = isGoogleGotoUrl(rawTarget.href) ? rawTarget.href : '';
+      if (!directUrl && /(^|\.)google\.[a-z.]+$/i.test(rawTarget.hostname)
+        && /\/(search|preferences|aclk|sorry)(\/|\?|$)/i.test(rawTarget.pathname)) continue;
+      if (rawTarget.hostname === 'translate.google.com' || rawTarget.hostname.endsWith('.googleusercontent.com')) continue;
+      if (seenUrls.has(targetUrl)) continue;
+      seenUrls.add(targetUrl);
       const block = heading.closest('.MjjYud, .g, [data-sokoban-container]') || anchor.closest('.MjjYud, .g, [data-sokoban-container]') || heading.parentElement;
       const snippetNode = block?.querySelector?.('.VwiC3b, .yXK7lf, .GI74Re, .ITZIwc, .IsZvec, [data-sncf], .aCOpRe');
       const cite = block?.querySelector?.('cite');
+      const displayMetadata = getGoogleDisplayUrlMetadata(cite?.innerText || cite?.textContent || '');
       results.push({
         title: clean(heading.innerText || heading.textContent),
-        url: target.href,
+        url: targetUrl,
         snippet: clean(snippetNode?.innerText || snippetNode?.textContent || '').slice(0, 1800),
-        displayUrl: clean(cite?.innerText || cite?.textContent || target.hostname),
+        displayUrl: displayMetadata.displayUrl || (directUrl ? new URL(directUrl).hostname : ''),
+        siteUrlHint: displayMetadata.siteUrlHint,
+        urlSource: directUrl ? '2captcha-html' : '',
+        googleGotoSourceUrl,
         _position: results.length + 1
       });
     }

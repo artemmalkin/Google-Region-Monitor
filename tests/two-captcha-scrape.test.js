@@ -5,6 +5,16 @@ const path = require('node:path');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'sidepanel.js'), 'utf8');
 
+const googleUrlHelpers = (() => {
+  const start = source.indexOf('function isGoogleGotoUrl(value) {');
+  const end = source.indexOf('async function resolveGoogleGotoLinksInReport(report) {', start);
+  if (start < 0 || end < 0) throw new Error('Google result URL helpers not found');
+  return new Function('URL', `${source.slice(start, end)}\nreturn {
+    isGoogleGotoUrl, normalizeDirectGoogleResultUrl, getDirectGoogleResultUrlFromItem,
+    getDirectGoogleResultUrlFromAnchor, getGoogleDisplayUrlMetadata
+  };`)(URL);
+})();
+
 function extractFunction(startMarker, endMarker, returnName, injected = {}) {
   const start = source.indexOf(startMarker);
   const end = source.indexOf(endMarker, start);
@@ -69,7 +79,7 @@ function getScrapeFunction(overrides = {}) {
     'async function searchGoogleVia2CaptchaScrape(url, apiKey, maxPages, apiLog = []) {',
     "$('stop-monitor').addEventListener('click'",
     'searchGoogleVia2CaptchaScrape',
-    { fetch: async () => { throw new Error('fetch not mocked'); }, setTimeout: immediateTimeout, stopRequested: false, DOMParser: FakeDOMParser, ...overrides }
+    { ...googleUrlHelpers, fetch: async () => { throw new Error('fetch not mocked'); }, setTimeout: immediateTimeout, stopRequested: false, DOMParser: FakeDOMParser, ...overrides }
   );
 }
 
@@ -168,7 +178,7 @@ test('Scrape does not misclassify ordinary Google SERP scripts as a CAPTCHA', as
     }
   }
   const mockFetch = async () => apiResponse({ status: 'success', http_code: 200, body: realGoogleScriptHtml });
-  const result = await getScrapeFunction({ fetch: mockFetch, DOMParser: ModernGoogleDomParser })(
+  const result = await getScrapeFunction({ fetch: mockFetch, DOMParser: ModernGoogleDomParser, ...googleUrlHelpers })(
     'https://www.google.com/search?q=example&tbs=qdr%3Aw', 'test-key', 1
   );
   assert.equal(result.googleBlocked, false);
@@ -216,7 +226,7 @@ test('Scrape backend remains available in the normal monitoring UI', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'sidepanel.html'), 'utf8');
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'manifest.json'), 'utf8'));
   assert.match(html, /<option value="2captcha-scrape">2Captcha Scrape/);
-  assert.equal(manifest.version, '1.9.3');
+  assert.equal(manifest.version, '1.9.4');
   assert.match(source, /task_type: 'scrape'/);
   assert.match(source, /searchGoogleVia2CaptchaScrape/);
 });

@@ -99,6 +99,49 @@ test('Google /goto resolver reads Location from response headers, including non-
   assert.ok(backgroundSource.includes("{ urls: ['https://www.google.com/goto*'] }, ['responseHeaders']"));
 });
 
+
+test('direct-address discovery ignores opaque CAES tokens but unwraps legacy Google /url links', () => {
+  const helpers = extract(
+    sidepanelSource,
+    'function isGoogleGotoUrl(value) {',
+    'async function resolveGoogleGotoLinksInReport(report) {',
+    '({ normalizeDirectGoogleResultUrl, getDirectGoogleResultUrlFromAnchor, getGoogleDisplayUrlMetadata })',
+    { URL }
+  );
+  assert.equal(helpers.normalizeDirectGoogleResultUrl('CAESopaque-token', 'https://www.google.com/'), '');
+  assert.equal(helpers.normalizeDirectGoogleResultUrl('/goto?url=CAESopaque-token', 'https://www.google.com/'), '');
+  assert.equal(
+    helpers.normalizeDirectGoogleResultUrl('https://www.google.com/url?q=https%3A%2F%2Fpublisher.example%2Fstory', 'https://www.google.com/'),
+    'https://publisher.example/story'
+  );
+  const anchor = { href: 'https://www.google.com/goto?url=CAESopaque-token', getAttribute: (name) => name === 'href' ? '/goto?url=CAESopaque-token' : name === 'ping' ? '/url?url=CAESopaque-token' : null };
+  assert.equal(helpers.getDirectGoogleResultUrlFromAnchor(anchor, 'https://www.google.com/search?q=test'), '');
+  assert.equal(helpers.getGoogleDisplayUrlMetadata('https://ugm.ac.id › berita › title...').siteUrlHint, 'https://ugm.ac.id/');
+});
+
+test('direct JSON/HTML addresses skip Google redirect requests for that token', async () => {
+  const pendingGoogleGotoResolutions = [];
+  const chrome = { runtime: { sendMessage: async (message) => { pendingGoogleGotoResolutions.push(message.url); return { ok: false, url: '' }; } } };
+  const resolveLinks = extract(
+    sidepanelSource,
+    'function isGoogleGotoUrl(value) {',
+    'function createReportHtml(report) {',
+    'resolveGoogleGotoLinksInReport',
+    { chrome, URL }
+  );
+  const report = { queries: [{ pages: [{ results: [
+    { title: 'From JSON', url: 'https://publisher.example/json', urlSource: '2captcha-json', googleGotoSourceUrl: gotoA },
+    { title: 'Duplicate token', url: gotoA, googleGotoSourceUrl: gotoA, siteUrlHint: 'https://publisher.example/' }
+  ] }] }] };
+  const stats = await resolveLinks(report);
+  assert.deepEqual(pendingGoogleGotoResolutions, [], 'no Google request is needed when JSON/HTML already supplied the destination');
+  assert.equal(report.queries[0].pages[0].results[1].url, 'https://publisher.example/json');
+  assert.equal(stats.total, 1);
+  assert.equal(stats.resolved, 1);
+  assert.equal(stats.fromJson, 1);
+  assert.equal(stats.fromRedirect, 0);
+});
+
 test('Google /goto redirect capture is scoped to the Google endpoint', () => {
   assert.match(backgroundSource, /onBeforeRedirect\.addListener[\s\S]*?https:\/\/www\.google\.com\/goto\*/);
   assert.match(backgroundSource, /redirect:\s*'manual'/);

@@ -5,6 +5,16 @@ const path = require('node:path');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'sidepanel.js'), 'utf8');
 
+const googleUrlHelpers = (() => {
+  const start = source.indexOf('function isGoogleGotoUrl(value) {');
+  const end = source.indexOf('async function resolveGoogleGotoLinksInReport(report) {', start);
+  if (start < 0 || end < 0) throw new Error('Google result URL helpers not found');
+  return new Function('URL', `${source.slice(start, end)}\nreturn {
+    isGoogleGotoUrl, normalizeDirectGoogleResultUrl, getDirectGoogleResultUrlFromItem,
+    getDirectGoogleResultUrlFromAnchor, getGoogleDisplayUrlMetadata
+  };`)(URL);
+})();
+
 function extractFunction(startMarker, endMarker, returnName, injected = {}) {
   const start = source.indexOf(startMarker);
   const end = source.indexOf(endMarker, start);
@@ -52,7 +62,11 @@ class FakeDOMParser {
           return null;
         }
       };
-      const anchor = { href: item.url, getAttribute: (name) => name === 'href' ? item.url : null, closest: () => block };
+      const anchor = {
+        href: item.url,
+        getAttribute: (name) => name === 'href' ? item.url : name === 'data-url' ? (item.dataUrl || null) : name === 'ping' ? (item.ping || null) : null,
+        closest: () => block
+      };
       return {
         textContent: item.title, innerText: item.title,
         closest: (selector) => selector === 'a[href]' ? anchor : block,
@@ -70,7 +84,7 @@ function getSearchFunction(overrides = {}) {
     'async function searchGoogleVia2Captcha(url, apiKey, maxPages, apiLog = []) {',
     "$('stop-monitor').addEventListener('click'",
     'searchGoogleVia2Captcha',
-    { fetch: async () => { throw new Error('fetch not mocked'); }, setTimeout: immediateTimeout, stopRequested: false, DOMParser: FakeDOMParser, ...overrides }
+    { ...googleUrlHelpers, fetch: async () => { throw new Error('fetch not mocked'); }, setTimeout: immediateTimeout, stopRequested: false, DOMParser: FakeDOMParser, ...overrides }
   );
 }
 
@@ -163,6 +177,45 @@ test('HTML-only pages from a combined response fill pages missing from structure
   assert.equal(result.pages[1].results.length, 4);
   assert.equal(result.pages[1].results[0].url, 'https://example.com/page-2-1');
   assert.deepEqual(result.missingPages, []);
+});
+
+test('a direct URL in a structured 2Captcha field wins over the primary Google /goto URL', async () => {
+  const gotoUrl = 'https://www.google.com/goto?url=opaque-structured&gsessionid=session';
+  const directUrl = 'https://publisher.example/from-json';
+  const mockFetch = async () => response({
+    status: 'success',
+    task_param: { pages: 1 },
+    groups: { organic: { items: [{
+      title: 'Result with direct JSON target', url: gotoUrl, link: directUrl,
+      description: 'JSON result', position: 1, page_position: { page: 1, position: 1 }
+    }] } }
+  });
+  const result = await getSearchFunction({ fetch: mockFetch })(
+    'https://www.google.com/search?q=example', 'test-key', 1
+  );
+  assert.equal(result.pages[0].results[0].url, directUrl);
+  assert.equal(result.pages[0].results[0].urlSource, '2captcha-json');
+  assert.equal(result.pages[0].results[0].googleGotoSourceUrl, gotoUrl);
+});
+
+test('a direct data-url in Google HTML wins over /goto and retains a domain hint', async () => {
+  const gotoUrl = 'https://www.google.com/goto?url=opaque-html&gsessionid=session';
+  const directUrl = 'https://publisher.example/from-html';
+  const html = htmlPage([{
+    title: 'Result with direct HTML target', url: gotoUrl, dataUrl: directUrl,
+    displayUrl: 'https://publisher.example › articles › result-title'
+  }]);
+  const mockFetch = async () => response({
+    status: 'success', task_param: { pages: 2 }, groups: { organic: { items: [] } }, html: [html]
+  });
+  const result = await getSearchFunction({ fetch: mockFetch })(
+    'https://www.google.com/search?q=example', 'test-key', 2
+  );
+  const item = result.pages[0].results[0];
+  assert.equal(item.url, directUrl);
+  assert.equal(item.urlSource, '2captcha-html');
+  assert.equal(item.googleGotoSourceUrl, gotoUrl);
+  assert.equal(item.siteUrlHint, 'https://publisher.example/');
 });
 
 test('single-page search makes one API task and does not request HTML', async () => {

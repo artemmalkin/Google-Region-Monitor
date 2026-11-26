@@ -1,4 +1,13 @@
-# GitHub update instructions — v1.9.3
+# GitHub update instructions — v1.9.4
+
+## 1.9.4 — prefer direct 2Captcha/HTML URLs before Google redirects
+
+- Before requesting a Google `/goto` URL, inspects structured 2Captcha result fields for an ordinary HTTP(S) destination (`url`, `link`, `target_url`, `destination_url`, `original_url`, `final_url`, `resolved_url`, and supported variants).
+- Inspects Google HTML `href` and destination attributes (`data-url`, `data-href`, `data-dest-url`, `data-target-url`, `data-original-url`, `data-lpage`), plus absolute URLs embedded in `ping`. Opaque `CAES...` values are never treated as relative Google URLs.
+- Merges structured and HTML results without discarding richer HTML metadata when titles match; a direct HTML target can replace a Google `/goto` wrapper.
+- Uses Google `/goto` resolution only as a fallback. A visible domain from the Google breadcrumb is retained as a separate hint, never represented as the exact article URL.
+- Report statistics distinguish direct URLs from JSON, direct URLs from HTML, Google redirect resolutions, unresolved links, and unresolved links with a domain hint.
+- Automated tests: 38/38 passed. Live browser resolution against Google was not run as part of this package build.
 
 ## 1.9.3 — improve Google /goto resolution
 
