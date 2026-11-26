@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T12:15:20.525Z",
+  "updatedAt": "2026-11-26T12:18:02.887Z",
   "profiles": [
     {
       "id": "argentina",
@@ -147,7 +147,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(Rosatom OR Atomenergoprom OR Rosenergoatom OR TVEL OR TENEX OR ASE) (\"Ninh Thuận\")"
+            "rosatom"
           ]
         },
         {
@@ -168,7 +168,7 @@
       "queries": [
         "(\"năng lượng hạt nhân\" OR \"nhà máy điện hạt nhân\" OR PLTN OR SMR OR \"chính sách năng lượng\" OR \"điện gió\" OR \"điện mặt trời\")",
         "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"Đường biển phía Bắc\" OR container OR logistics OR \"blue economy\" OR \"kinh tế biển\" OR \"energy storage\")",
-        "(Rosatom OR Atomenergoprom OR Rosenergoatom OR TVEL OR TENEX OR ASE) (\"Ninh Thuận\")",
+        "rosatom",
         "(điện hạt nhân OR nuclear) (Việt Nam OR Vietnam) (chính sách OR policy OR SMR OR Ninh Thuận OR nhiên liệu OR fuel OR chất thải OR waste OR tháo dỡ OR decommissioning OR ý kiến công chúng OR public opinion)",
         "(năng lượng tái tạo OR renewable OR điện gió OR wind OR điện mặt trời OR solar OR lưu trữ OR storage OR y học hạt nhân OR nuclear medicine OR đồng vị OR isotopes OR logistics OR kinh tế biển OR blue economy) (Việt Nam OR Vietnam)"
       ]
