@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T15:24:15.926Z",
+  "updatedAt": "2026-11-26T17:00:00.000Z",
   "profiles": [
     {
       "id": "argentina",
@@ -8,30 +8,20 @@
       "interfaceLang": "es",
       "resultLangs": "es, en",
       "region": "AR",
-      "queries": [
-        "(\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
-        "site:x.com Argentina (\"energía nuclear\" OR \"industria nuclear\" OR Atucha OR Embalse) -arma -guerra -misil",
-        "(site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
-      ],
       "profileGroup": "Латинская Америка",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"energía nuclear\" OR \"central nuclear\" OR SMR OR \"política nuclear\" OR \"opinión pública\" OR \"medicina nuclear\" OR radioisótopos OR uranio OR litio)",
-            "site:x.com Argentina (\"energía nuclear\" OR \"industria nuclear\" OR Atucha OR Embalse) -arma -guerra -misil"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:x.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Argentina -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom energía nuclear Argentina"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Argentina"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR plantas Argentina"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Argentina"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom energía nuclear Argentina",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Argentina",
+        "energía nuclear SMR plantas Argentina",
+        "política nuclear opinión pública Argentina"
+      ]
     },
     {
       "id": "bangladesh",
@@ -39,30 +29,20 @@
       "interfaceLang": "en",
       "resultLangs": "en, bn",
       "region": "BD",
-      "queries": [
-        "(BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Bangladesh AND (BAEC OR \"nuclear power plant\"))",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
-      ],
       "profileGroup": "Южная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(BAEC OR \"Bangladesh Atomic Energy Commission\" OR \"nuclear power plant Bangladesh\") -weapon -missile -bomb",
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Bangladesh AND (BAEC OR \"nuclear power plant\"))"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR Rooppur OR RNPP OR BAEC OR Atomstroyexport) Bangladesh -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Rooppur OR RNPP OR BAEC Bangladesh -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Bangladesh"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear power plant SMR Rooppur Bangladesh"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion Bangladesh"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR Rooppur OR RNPP OR BAEC Bangladesh -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Bangladesh",
+        "nuclear power plant SMR Rooppur Bangladesh",
+        "nuclear policy public opinion Bangladesh"
+      ]
     },
     {
       "id": "bolivia",
@@ -70,30 +50,22 @@
       "interfaceLang": "es",
       "resultLangs": "es, en",
       "region": "BO",
-      "queries": [
-        "Bolivia (\"energía nuclear\" OR SMR OR litio OR YLB) -arma -guerra -misil",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Bolivia (litio OR YLB OR \"industria del litio\" OR \"carbonato de litio\")",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR CIDTN OR \"Centro Nuclear El Alto\") Bolivia -site:.ru"
-      ],
       "profileGroup": "Латинская Америка",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "Bolivia (\"energía nuclear\" OR SMR OR litio OR YLB) -arma -guerra -misil",
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Bolivia (litio OR YLB OR \"industria del litio\" OR \"carbonato de litio\")"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR CIDTN OR \"Centro Nuclear El Alto\") Bolivia -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR YLB energía nuclear Bolivia"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Bolivia"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR litio Bolivia"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Bolivia"] },
+        { "id": "lithium-sector", "name": "Литиевый сектор Боливии", "queries": ["YLB litio Bolivia SQM Codelco"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR YLB energía nuclear Bolivia",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Bolivia",
+        "energía nuclear SMR litio Bolivia",
+        "política nuclear opinión pública Bolivia",
+        "YLB litio Bolivia SQM Codelco"
+      ]
     },
     {
       "id": "brazil",
@@ -101,30 +73,20 @@
       "interfaceLang": "pt-BR",
       "resultLangs": "pt, en",
       "region": "BR",
-      "queries": [
-        "(\"energia nuclear\" OR \"usina nuclear\" OR \"Angra 3\" OR Eletronuclear OR \"política nuclear\" OR \"medicina nuclear\" OR radioisótopos OR RMB OR CNEN OR urânio) -arma -guerra -míssil",
-        "(site:x.com OR site:facebook.com OR site:instagram.com) (\"usina nuclear\" OR Eletronuclear OR \"Angra 3\") Brasil -arma -guerra -míssil",
-        "(site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR TVEL) Brasil -site:.ru"
-      ],
       "profileGroup": "Латинская Америка",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"energia nuclear\" OR \"usina nuclear\" OR \"Angra 3\" OR Eletronuclear OR \"política nuclear\" OR \"medicina nuclear\" OR radioisótopos OR RMB OR CNEN OR urânio) -arma -guerra -míssil",
-            "(site:x.com OR site:facebook.com OR site:instagram.com) (\"usina nuclear\" OR Eletronuclear OR \"Angra 3\") Brasil -arma -guerra -míssil"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR TVEL) Brasil -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Eletronuclear energia nuclear Brasil"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energia nuclear Brasil"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energia nuclear SMR Eletronuclear Brasil"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinião pública Brasil"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR Eletronuclear energia nuclear Brasil",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energia nuclear Brasil",
+        "energia nuclear SMR Eletronuclear Brasil",
+        "política nuclear opinião pública Brasil"
+      ]
     },
     {
       "id": "vietnam",
@@ -133,40 +95,16 @@
       "resultLangs": "vi",
       "region": "VN",
       "profileGroup": "Восточная и Юго-Восточная Азия",
-      "queryGroupsRevision": 2,
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "Rosatom nhà máy điện hạt nhân"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Конкуренты Росатома",
-          "queries": [
-            "EDF OR Westinghouse OR KHNP OR CNNC điện hạt nhân Việt Nam"
-          ]
-        },
-        {
-          "id": "mwxhjqap-sskrrth",
-          "name": "Энергетическая сфера",
-          "queries": [
-            "điện hạt nhân lò phản ứng mô-đun nhỏ"
-          ]
-        },
-        {
-          "id": "mwxhjzeg-ewxjxtm",
-          "name": "Общественно-политическая сфера",
-          "queries": [
-            "ý kiến công chúng về điện hạt nhân"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom nhà máy điện hạt nhân"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC điện hạt nhân Việt Nam"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["điện hạt nhân lò phản ứng mô-đun nhỏ"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["ý kiến công chúng về điện hạt nhân"] }
       ],
       "queries": [
         "Rosatom nhà máy điện hạt nhân",
-        "EDF OR Westinghouse OR KHNP OR CNNC điện hạt nhân Việt Nam",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC điện hạt nhân Việt Nam",
         "điện hạt nhân lò phản ứng mô-đun nhỏ",
         "ý kiến công chúng về điện hạt nhân"
       ]
@@ -177,32 +115,20 @@
       "interfaceLang": "en",
       "resultLangs": "en",
       "region": "IN",
-      "queries": [
-        "(\"nuclear energy\" OR \"nuclear power plant\" OR NPCIL OR \"Department of Atomic Energy\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\") -weapon -missile",
-        "(\"Northern Sea Route\" OR Arctic OR containers OR logistics OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR renewables OR \"rare earths\" OR \"back-end\")",
-        "(site:x.com OR site:facebook.com OR site:instagram.com) India (nuclear OR NPCIL OR \"medical isotopes\" OR \"Arctic shipping\")",
-        "(site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR Kudankulam OR KKNPP OR \"Kudankulam Nuclear Power Project\" OR TVEL) India -site:.ru"
-      ],
       "profileGroup": "Южная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"nuclear energy\" OR \"nuclear power plant\" OR NPCIL OR \"Department of Atomic Energy\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\") -weapon -missile",
-            "(\"Northern Sea Route\" OR Arctic OR containers OR logistics OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR renewables OR \"rare earths\" OR \"back-end\")",
-            "(site:x.com OR site:facebook.com OR site:instagram.com) India (nuclear OR NPCIL OR \"medical isotopes\" OR \"Arctic shipping\")"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:x.com OR site:facebook.com OR site:instagram.com) (Rosatom OR Росатом OR Kudankulam OR KKNPP OR \"Kudankulam Nuclear Power Project\" OR TVEL) India -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Kudankulam OR TVEL OR Uranium One India -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear India"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear energy SMR NSR India"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["\"India-Russia relations\" nuclear policy India"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR Kudankulam OR TVEL OR Uranium One India -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear India",
+        "nuclear energy SMR NSR India",
+        "\"India-Russia relations\" nuclear policy India"
+      ]
     },
     {
       "id": "indoneziya",
@@ -211,40 +137,16 @@
       "resultLangs": "id",
       "region": "ID",
       "profileGroup": "Восточная и Юго-Восточная Азия",
-      "queryGroupsRevision": 2,
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "Rosatom PLTN reaktor modular kecil"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Конкуренты Росатома",
-          "queries": [
-            "EDF OR Westinghouse OR KHNP OR CNNC PLTN Indonesia"
-          ]
-        },
-        {
-          "id": "mwxp34qk-lqkj6bz",
-          "name": "Энергетическая сфера",
-          "queries": [
-            "PLTN reaktor modular kecil limbah radioaktif"
-          ]
-        },
-        {
-          "id": "mwxp79vz-a4frcee",
-          "name": "Общественно-политическая сфера",
-          "queries": [
-            "kebijakan nuklir opini publik tentang nuklir"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom PLTN reaktor modular kecil"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC PLTN Indonesia"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["PLTN reaktor modular kecil limbah radioaktif"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["kebijakan nuklir opini publik tentang nuklir"] }
       ],
       "queries": [
         "Rosatom PLTN reaktor modular kecil",
-        "EDF OR Westinghouse OR KHNP OR CNNC PLTN Indonesia",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC PLTN Indonesia",
         "PLTN reaktor modular kecil limbah radioaktif",
         "kebijakan nuklir opini publik tentang nuklir"
       ]
@@ -256,40 +158,16 @@
       "resultLangs": "zh-CN",
       "region": "HK",
       "profileGroup": "Восточная и Юго-Восточная Азия",
-      "queryGroupsRevision": 2,
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "Rosatom 核电 中国"
-          ]
-        },
-        {
-          "id": "mwxpc61u-re3x6m8",
-          "name": "Конкуренты Росатома",
-          "queries": [
-            "Westinghouse OR EDF OR Framatome OR CNNC 核电 中国"
-          ]
-        },
-        {
-          "id": "mwxpcv1g-ea1opyu",
-          "name": "Энергетическая сфера",
-          "queries": [
-            "核电 小型模块化反应堆 能源规划"
-          ]
-        },
-        {
-          "id": "mwxpd5w6-woq4mhe",
-          "name": "Общественно-политическая сфера",
-          "queries": [
-            "公众对核电的态度 能源规划"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom 核电 中国"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 核电 中国"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["核电 小型模块化反应堆 能源规划"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["公众对核电的态度 能源规划"] }
       ],
       "queries": [
         "Rosatom 核电 中国",
-        "Westinghouse OR EDF OR Framatome OR CNNC 核电 中国",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 核电 中国",
         "核电 小型模块化反应堆 能源规划",
         "公众对核电的态度 能源规划"
       ]
@@ -300,30 +178,20 @@
       "interfaceLang": "es",
       "resultLangs": "es, en",
       "region": "CU",
-      "queries": [
-        "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Cuba (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Cuba -site:.ru"
-      ],
       "profileGroup": "Латинская Америка",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Cuba (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Cuba -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom energía nuclear Cuba"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Cuba"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR plantas Cuba"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Cuba"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom energía nuclear Cuba",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Cuba",
+        "energía nuclear SMR plantas Cuba",
+        "política nuclear opinión pública Cuba"
+      ]
     },
     {
       "id": "malaysia",
@@ -331,32 +199,20 @@
       "interfaceLang": "en",
       "resultLangs": "en, ms",
       "region": "MY",
-      "queries": [
-        "(\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\")",
-        "(\"Northern Sea Route\" OR \"blue economy\" OR icebreaker OR \"energy storage\" OR \"rare earths\" OR \"coal phase-out\" OR \"energy transition\" OR decommissioning OR tariffs OR CRESS OR MyPower)",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Malaysia (\"nuclear energy\" OR \"Northern Sea Route\" OR \"energy storage\")",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR TVEL) Malaysia -site:.ru"
-      ],
       "profileGroup": "Южная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"irradiation technology\")",
-            "(\"Northern Sea Route\" OR \"blue economy\" OR icebreaker OR \"energy storage\" OR \"rare earths\" OR \"coal phase-out\" OR \"energy transition\" OR decommissioning OR tariffs OR CRESS OR MyPower)",
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Malaysia (\"nuclear energy\" OR \"Northern Sea Route\" OR \"energy storage\")"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR TVEL) Malaysia -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR TVEL AEBF Malaysia -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Malaysia"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear energy SMR ASEAN Malaysia"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion Malaysia"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR TVEL AEBF Malaysia -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Malaysia",
+        "nuclear energy SMR ASEAN Malaysia",
+        "nuclear policy public opinion Malaysia"
+      ]
     },
     {
       "id": "mexico",
@@ -364,30 +220,20 @@
       "interfaceLang": "es",
       "resultLangs": "es, en",
       "region": "MX",
-      "queries": [
-        "(\"energía nuclear\" OR nucleoeléctrica OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) México (\"energía nuclear\" OR \"central nuclear\" OR nucleoeléctrica)",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") México -site:.ru"
-      ],
       "profileGroup": "Латинская Америка",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"energía nuclear\" OR nucleoeléctrica OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra",
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) México (\"energía nuclear\" OR \"central nuclear\" OR nucleoeléctrica)"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") México -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom energía nuclear México"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear México"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR plantas México"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública México"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom energía nuclear México",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear México",
+        "energía nuclear SMR plantas México",
+        "política nuclear opinión pública México"
+      ]
     },
     {
       "id": "myanmar",
@@ -395,30 +241,20 @@
       "interfaceLang": "en",
       "resultLangs": "en",
       "region": "MM",
-      "queries": [
-        "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
-        "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")",
-        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"nuclear energy\" OR \"nuclear power plant\" OR SMR OR \"nuclear fuel\" OR \"public opinion\" OR \"nuclear policy\" OR \"wind energy\" OR \"solar energy\" OR \"renewable energy\")",
-            "(\"Northern Sea Route\" OR \"Arctic shipping\" OR \"container shipping\" OR \"international logistics\" OR \"blue economy\" OR \"maritime policy\" OR \"energy storage\")"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Myanmar -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом Myanmar -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Myanmar"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear energy SMR Myanmar"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion Myanmar"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR Росатом Myanmar -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Myanmar",
+        "nuclear energy SMR Myanmar",
+        "nuclear policy public opinion Myanmar"
+      ]
     },
     {
       "id": "paraguay",
@@ -426,30 +262,20 @@
       "interfaceLang": "es",
       "resultLangs": "es, en",
       "region": "PY",
-      "queries": [
-        "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR \"reactor modular pequeño\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Paraguay (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Paraguay -site:.ru"
-      ],
       "profileGroup": "Латинская Америка",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR \"reactor modular pequeño\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Paraguay (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Paraguay -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom energía nuclear Paraguay"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Paraguay"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR plantas Paraguay"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Paraguay"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom energía nuclear Paraguay",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Paraguay",
+        "energía nuclear SMR plantas Paraguay",
+        "política nuclear opinión pública Paraguay"
+      ]
     },
     {
       "id": "thailand",
@@ -457,32 +283,20 @@
       "interfaceLang": "th",
       "resultLangs": "th, en",
       "region": "TH",
-      "queries": [
-        "(\"พลังงานนิวเคลียร์\" OR \"โรงไฟฟ้านิวเคลียร์\" OR SMR OR \"เชื้อเพลิงนิวเคลียร์\" OR \"กากกัมมันตรังสี\" OR \"นโยบายพลังงานนิวเคลียร์\")",
-        "(\"เวชศาสตร์นิวเคลียร์\" OR \"ผลิตภัณฑ์ไอโซโทป\" OR MCO OR MCL OR \"เทคโนโลยีการผลิตแบบเพิ่มเนื้อวัสดุ\" OR \"3D พิมพ์\")",
-        "(\"Northern Sea Route\" OR \"ขนส่งตู้คอนเทนเนอร์\" OR \"โลจิสติกส์ระหว่างประเทศ\" OR \"ระบบกักเก็บพลังงาน\" OR \"เรือตัดน้ำแข็งนิวเคลียร์\")",
-        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Thailand -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"พลังงานนิวเคลียร์\" OR \"โรงไฟฟ้านิวเคลียร์\" OR SMR OR \"เชื้อเพลิงนิวเคลียร์\" OR \"กากกัมมันตรังสี\" OR \"นโยบายพลังงานนิวเคลียร์\")",
-            "(\"เวชศาสตร์นิวเคลียร์\" OR \"ผลิตภัณฑ์ไอโซโทป\" OR MCO OR MCL OR \"เทคโนโลยีการผลิตแบบเพิ่มเนื้อวัสดุ\" OR \"3D พิมพ์\")",
-            "(\"Northern Sea Route\" OR \"ขนส่งตู้คอนเทนเนอร์\" OR \"โลจิสติกส์ระหว่างประเทศ\" OR \"ระบบกักเก็บพลังงาน\" OR \"เรือตัดน้ำแข็งนิวเคลียร์\")"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Thailand -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом โรงไฟฟ้านิวเคลียร์ ประเทศไทย -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC โรงไฟฟ้านิวเคลียร์ ประเทศไทย"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["SMR กากกัมมันตรังสี ประเทศไทย"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["นโยบายพลังงานนิวเคลียร์ ความคิดเห็นสาธารณะ ประเทศไทย"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR Росатом โรงไฟฟ้านิวเคลียร์ ประเทศไทย -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC โรงไฟฟ้านิวเคลียร์ ประเทศไทย",
+        "SMR กากกัมมันตรังสี ประเทศไทย",
+        "นโยบายพลังงานนิวเคลียร์ ความคิดเห็นสาธารณะ ประเทศไทย"
+      ]
     },
     {
       "id": "philippines",
@@ -490,28 +304,20 @@
       "interfaceLang": "en",
       "resultLangs": "en",
       "region": "PH",
-      "queries": [
-        "(\"nuclear power\" OR \"nuclear energy\" OR \"nuclear plant\" OR \"Bataan Nuclear Power Plant\" OR SMR)",
-        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Philippines -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"nuclear power\" OR \"nuclear energy\" OR \"nuclear plant\" OR \"Bataan Nuclear Power Plant\" OR SMR)"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") Philippines -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом Philippines -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Philippines"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear power SMR Philippines"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion Philippines"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR Росатом Philippines -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Philippines",
+        "nuclear power SMR Philippines",
+        "nuclear policy public opinion Philippines"
+      ]
     },
     {
       "id": "chile",
@@ -519,30 +325,20 @@
       "interfaceLang": "es",
       "resultLangs": "es, en",
       "region": "CL",
-      "queries": [
-        "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Chile (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Chile -site:.ru"
-      ],
       "profileGroup": "Латинская Америка",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"energía nuclear\" OR \"central nuclear\" OR \"reactor nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos OR \"centro de irradiación\") -arma -misil -guerra -bomba",
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) Chile (\"energía nuclear\" OR SMR OR \"medicina nuclear\" OR radioisótopos) -arma -guerra"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") Chile -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR SQM energía nuclear Chile"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Chile"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["energía nuclear SMR litio Chile"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["política nuclear opinión pública Chile"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR SQM energía nuclear Chile",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Chile",
+        "energía nuclear SMR litio Chile",
+        "política nuclear opinión pública Chile"
+      ]
     },
     {
       "id": "sri-lanka",
@@ -550,32 +346,20 @@
       "interfaceLang": "en",
       "resultLangs": "en",
       "region": "LK",
-      "queries": [
-        "(\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"isotope production\" OR \"irradiation technology\") -weapon -missile",
-        "(\"Northern Sea Route\" OR Arctic OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR batteries OR \"back-end\" OR renewables OR \"rare earths\")",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (\"Sri Lanka\" AND (\"nuclear energy\" OR \"medical isotopes\" OR \"Arctic shipping\" OR \"rare earths\")) -weapon",
-        "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"Sri Lanka\" -site:.ru"
-      ],
       "profileGroup": "Южная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(\"nuclear energy\" OR \"nuclear power plant\" OR \"nuclear medicine\" OR \"medical isotopes\" OR \"isotope production\" OR \"irradiation technology\") -weapon -missile",
-            "(\"Northern Sea Route\" OR Arctic OR \"nuclear icebreaker\" OR shipyard OR composites OR \"carbon fiber\" OR \"energy storage\" OR batteries OR \"back-end\" OR renewables OR \"rare earths\")",
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (\"Sri Lanka\" AND (\"nuclear energy\" OR \"medical isotopes\" OR \"Arctic shipping\" OR \"rare earths\")) -weapon"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(site:facebook.com OR site:x.com OR site:instagram.com OR site:youtube.com) (Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"Sri Lanka\" -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR TVEL \"Sri Lanka\" -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear \"Sri Lanka\""] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["nuclear energy SMR \"Sri Lanka\""] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["nuclear policy public opinion \"Sri Lanka\""] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR TVEL \"Sri Lanka\" -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear \"Sri Lanka\"",
+        "nuclear energy SMR \"Sri Lanka\"",
+        "nuclear policy public opinion \"Sri Lanka\""
+      ]
     },
     {
       "id": "south-korea",
@@ -583,32 +367,20 @@
       "interfaceLang": "ko",
       "resultLangs": "ko, en",
       "region": "KR",
-      "queries": [
-        "(원전 OR 원자력 OR 원자력발전소 OR 핵연료 OR 핵연료주기 OR SMR OR 소형모듈원전)",
-        "(핵의학 OR 방사성동위원소 OR 동위원소 OR 핵연료주기 OR 증강제조 OR 3D프린팅)",
-        "(북극항로 OR 북극해 OR 북극항해 OR 컨테이너운송 OR 해상운송 OR 국제물류 OR 블루이코노미 OR 해양경제 OR 에너지저장장치 OR ESS OR 원자력쇄빙선)",
-        "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"South Korea\" -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(원전 OR 원자력 OR 원자력발전소 OR 핵연료 OR 핵연료주기 OR SMR OR 소형모듈원전)",
-            "(핵의학 OR 방사성동위원소 OR 동위원소 OR 핵연료주기 OR 증강제조 OR 3D프린팅)",
-            "(북극항로 OR 북극해 OR 북극항해 OR 컨테이너운송 OR 해상운송 OR 국제물류 OR 블루이코노미 OR 해양경제 OR 에너지저장장치 OR ESS OR 원자력쇄빙선)"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(Rosatom OR Росатом OR \"Russian nuclear cooperation\") \"South Korea\" -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом \"South Korea\" -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 원자력 한국"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["원자력 SMR 소형모듈원전"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["원자력 정책 여론 한국"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR Росатом \"South Korea\" -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 원자력 한국",
+        "원자력 SMR 소형모듈원전",
+        "원자력 정책 여론 한국"
+      ]
     },
     {
       "id": "japan",
@@ -616,30 +388,20 @@
       "interfaceLang": "ja",
       "resultLangs": "ja, en",
       "region": "JP",
-      "queries": [
-        "(原発 OR 原子力 OR 原子力発電所 OR 原発建設 OR 核燃料 OR 燃料サイクル OR 原子力政策 OR エネルギー政策 OR 世論 OR 国民世論)",
-        "(核医学 OR 放射性同位体 OR ラジオアイソトープ OR 核燃料施設 OR 増材製造 OR \"3D プリンティング\")",
-        "(Rosatom OR Росатом OR 日本) Japan -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 4,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(原発 OR 原子力 OR 原子力発電所 OR 原発建設 OR 核燃料 OR 燃料サイクル OR 原子力政策 OR エネルギー政策 OR 世論 OR 国民世論)",
-            "(核医学 OR 放射性同位体 OR ラジオアイソトープ OR 核燃料施設 OR 増材製造 OR \"3D プリンティング\")"
-          ]
-        },
-        {
-          "id": "rosatom-projects",
-          "name": "Росатом и его проекты",
-          "queries": [
-            "(Rosatom OR Росатом OR 日本) Japan -site:.ru"
-          ]
-        }
+        { "id": "rosatom-projects", "name": "Росатом и его проекты", "queries": ["Rosatom OR Росатом 日本 -site:.ru"] },
+        { "id": "competitors", "name": "Конкуренты Росатома", "queries": ["Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 原発 日本"] },
+        { "id": "energy", "name": "Энергетическая сфера", "queries": ["原発 SMR エネルギー政策 日本"] },
+        { "id": "public-policy", "name": "Общественно-политическая сфера", "queries": ["原子力政策 世論 日本"] }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom OR Росатом 日本 -site:.ru",
+        "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 原発 日本",
+        "原発 SMR エネルギー政策 日本",
+        "原子力政策 世論 日本"
+      ]
     }
   ]
 }
