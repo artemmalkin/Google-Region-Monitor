@@ -82,7 +82,26 @@ test('background resolver validates Google /goto URLs and normalizes HTTP Locati
   await assert.rejects(() => functions.resolveGoogleGotoUrl('https://example.com/not-google'), /Разрешены только ссылки Google/);
 });
 
+test('Google /goto resolver reads Location from response headers, including non-3xx responses', () => {
+  const getLocation = extract(
+    backgroundSource,
+    'function getGoogleGotoLocationHeader(responseHeaders) {',
+    '// Google /goto normally responds',
+    'getGoogleGotoLocationHeader'
+  );
+  assert.equal(getLocation([
+    { name: 'content-type', value: 'text/html' },
+    { name: 'Location', value: 'https://publisher.example/article' }
+  ]), 'https://publisher.example/article');
+  assert.equal(getLocation([{ name: 'location', value: '' }]), '');
+  assert.equal(getLocation([{ name: 'content-type', value: 'text/html' }]), '');
+  assert.ok(backgroundSource.includes('chrome.webRequest.onHeadersReceived.addListener'));
+  assert.ok(backgroundSource.includes("{ urls: ['https://www.google.com/goto*'] }, ['responseHeaders']"));
+});
+
 test('Google /goto redirect capture is scoped to the Google endpoint', () => {
   assert.match(backgroundSource, /onBeforeRedirect\.addListener[\s\S]*?https:\/\/www\.google\.com\/goto\*/);
   assert.match(backgroundSource, /redirect:\s*'manual'/);
+  assert.ok(backgroundSource.includes('chrome.webRequest.onHeadersReceived.addListener'));
+  assert.ok(backgroundSource.includes("{ urls: ['https://www.google.com/goto*'] }, ['responseHeaders']"));
 });

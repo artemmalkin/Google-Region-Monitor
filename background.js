@@ -8,8 +8,25 @@ let googleSearchLastRequestAtInMemory = 0;
 const googleSearchSlotStates = new Map();
 const pendingGoogleGotoResolutions = new Map();
 
-// Google /goto tokens are opaque. Capture the first redirect target without
-// following it, so the extension never loads the destination page itself.
+function getGoogleGotoLocationHeader(responseHeaders) {
+  for (const header of responseHeaders || []) {
+    if (String(header?.name || '').toLowerCase() === 'location' && header.value) {
+      return String(header.value).trim();
+    }
+  }
+  return '';
+}
+
+// Google /goto normally responds with a redirect, but some responses expose
+// Location on a non-3xx status as well. Capture the raw response header first,
+// then keep onBeforeRedirect as a fallback for Chromium redirect events.
+// This observes only the Google endpoint and never loads publisher pages.
+if (chrome.webRequest?.onHeadersReceived) {
+  chrome.webRequest.onHeadersReceived.addListener((details) => {
+    const location = getGoogleGotoLocationHeader(details.responseHeaders);
+    if (location) pendingGoogleGotoResolutions.get(details.url)?.finish(location);
+  }, { urls: ['https://www.google.com/goto*'] }, ['responseHeaders']);
+}
 if (chrome.webRequest?.onBeforeRedirect) {
   chrome.webRequest.onBeforeRedirect.addListener((details) => {
     pendingGoogleGotoResolutions.get(details.url)?.finish(details.redirectUrl || '');
@@ -104,7 +121,7 @@ async function resolveGoogleGotoUrl(rawUrl) {
   return new Promise((resolve) => {
     let settled = false;
     let graceTimer = null;
-    const timeout = setTimeout(() => finish(''), 9000);
+    const timeout = setTimeout(() => finish(''), 12000);
     const finish = (destination) => {
       if (settled) return;
       settled = true;

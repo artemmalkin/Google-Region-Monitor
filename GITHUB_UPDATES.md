@@ -1,4 +1,11 @@
-# GitHub update instructions — v1.9.2
+# GitHub update instructions — v1.9.3
+
+## 1.9.3 — improve Google /goto resolution
+
+- Reads the raw HTTP `Location` header through `webRequest.onHeadersReceived`, including responses that carry `Location` without a standard 3xx redirect status.
+- Keeps `onBeforeRedirect` as a second capture path.
+- Both listeners are scoped to `https://www.google.com/goto*`; destination URLs still pass HTTP(S) validation and nested Google redirect wrappers are rejected.
+- Increases the response timeout to 12 seconds. URLs remain unresolved when Google does not provide a destination or rejects the request; 100% resolution cannot be guaranteed.
 
 ## 1.9.2 — resolve Google /goto result links
 
