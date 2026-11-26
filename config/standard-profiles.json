@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T15:22:24.139Z",
+  "updatedAt": "2026-11-26T15:24:15.926Z",
   "profiles": [
     {
       "id": "argentina",
@@ -255,32 +255,44 @@
       "interfaceLang": "zh-CN",
       "resultLangs": "zh-CN",
       "region": "HK",
-      "queries": [
-        "(核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
-        "(\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")",
-        "(Rosatom OR Росатом OR 中国) China -site:.ru",
-        "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
-      ],
       "profileGroup": "Восточная и Юго-Восточная Азия",
+      "queryGroupsRevision": 2,
       "queryGroups": [
-        {
-          "id": "main",
-          "name": "Основные запросы",
-          "queries": [
-            "(核电 OR 核能 OR 原子能 OR 核电站 OR SMR OR 核燃料 OR 燃料循环 OR 放射性废物 OR 社会舆论 OR 核医学 OR 放射性同位素 OR MCO OR 增材制造)",
-            "(\"北极航道\" OR \"北极航运\" OR \"Northern Sea Route\" OR \"集装箱运输\" OR \"国际物流\" OR \"蓝色经济\" OR \"储能系统\" OR \"电池储能\")"
-          ]
-        },
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "(Rosatom OR Росатом OR 中国) China -site:.ru",
-            "\"rosatom\" -\"rosatom.ru.\" -site:x.com -site:instagram.com -site:facebook.com -site:tiktok.com -site:youtube.com -site:threads.com -site:.ru"
+            "Rosatom 核电 中国"
+          ]
+        },
+        {
+          "id": "mwxpc61u-re3x6m8",
+          "name": "Конкуренты Росатома",
+          "queries": [
+            "Westinghouse OR EDF OR Framatome OR CNNC 核电 中国"
+          ]
+        },
+        {
+          "id": "mwxpcv1g-ea1opyu",
+          "name": "Энергетическая сфера",
+          "queries": [
+            "核电 小型模块化反应堆 能源规划"
+          ]
+        },
+        {
+          "id": "mwxpd5w6-woq4mhe",
+          "name": "Общественно-политическая сфера",
+          "queries": [
+            "公众对核电的态度 能源规划"
           ]
         }
       ],
-      "queryGroupsRevision": 2
+      "queries": [
+        "Rosatom 核电 中国",
+        "Westinghouse OR EDF OR Framatome OR CNNC 核电 中国",
+        "核电 小型模块化反应堆 能源规划",
+        "公众对核电的态度 能源规划"
+      ]
     },
     {
       "id": "cuba",
