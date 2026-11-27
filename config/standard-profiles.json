@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-26T18:13:49.410Z",
+  "updatedAt": "2026-11-27T05:34:01.246Z",
   "profiles": [
     {
       "id": "argentina",
@@ -197,13 +197,15 @@
       "resultLangs": "vi",
       "region": "VN",
       "profileGroup": "Восточная и Юго-Восточная Азия",
-      "queryGroupsRevision": 4,
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom nhà máy điện hạt nhân"
+            "Rosatom nhà máy điện hạt nhân",
+            "rosatom",
+            "\"rosatom\""
           ]
         },
         {
@@ -230,6 +232,8 @@
       ],
       "queries": [
         "Rosatom nhà máy điện hạt nhân",
+        "rosatom",
+        "\"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC điện hạt nhân Việt Nam",
         "điện hạt nhân lò phản ứng mô-đun nhỏ",
         "ý kiến công chúng về điện hạt nhân"
