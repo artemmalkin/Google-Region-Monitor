@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-27T06:32:15.921Z",
+  "updatedAt": "2026-11-27T06:33:21.461Z",
   "profiles": [
     {
       "id": "argentina",
@@ -15,7 +15,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom energía nuclear Argentina",
+            "Rosatom energía nuclear Argentina OR \"rosatom\"",
             "\"rosatom\""
           ]
         },
@@ -42,7 +42,7 @@
         }
       ],
       "queries": [
-        "Rosatom energía nuclear Argentina",
+        "Rosatom energía nuclear Argentina OR \"rosatom\"",
         "\"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Argentina",
         "energía nuclear SMR plantas Argentina",
