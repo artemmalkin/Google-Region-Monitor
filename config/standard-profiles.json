@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-27T05:34:01.246Z",
+  "updatedAt": "2026-11-27T05:51:12.097Z",
   "profiles": [
     {
       "id": "argentina",
@@ -204,7 +204,6 @@
           "name": "Росатом и его проекты",
           "queries": [
             "Rosatom nhà máy điện hạt nhân",
-            "rosatom",
             "\"rosatom\""
           ]
         },
@@ -232,7 +231,6 @@
       ],
       "queries": [
         "Rosatom nhà máy điện hạt nhân",
-        "rosatom",
         "\"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC điện hạt nhân Việt Nam",
         "điện hạt nhân lò phản ứng mô-đun nhỏ",
