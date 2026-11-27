@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-27T06:29:51.123Z",
+  "updatedAt": "2026-11-27T06:30:51.943Z",
   "profiles": [
     {
       "id": "argentina",
@@ -344,7 +344,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom 核电 中国 AND \"rosatom\"",
+            "Rosatom 核电 中国 OR \"rosatom\"",
             "\"rosatom\" -\"rosatom.ru\""
           ]
         },
@@ -371,7 +371,7 @@
         }
       ],
       "queries": [
-        "Rosatom 核电 中国 AND \"rosatom\"",
+        "Rosatom 核电 中国 OR \"rosatom\"",
         "\"rosatom\" -\"rosatom.ru\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 核电 中国",
         "核电 小型模块化反应堆 能源规划",
