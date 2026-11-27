@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-27T06:08:15.923Z",
+  "updatedAt": "2026-11-27T06:28:48.079Z",
   "profiles": [
     {
       "id": "argentina",
@@ -9,13 +9,14 @@
       "resultLangs": "es, en",
       "region": "AR",
       "profileGroup": "Латинская Америка",
-      "queryGroupsRevision": 4,
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom energía nuclear Argentina"
+            "Rosatom energía nuclear Argentina",
+            "\"rosatom\""
           ]
         },
         {
@@ -42,6 +43,7 @@
       ],
       "queries": [
         "Rosatom energía nuclear Argentina",
+        "\"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Argentina",
         "energía nuclear SMR plantas Argentina",
         "política nuclear opinión pública Argentina"
