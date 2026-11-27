@@ -107,7 +107,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom OR YLB energía nuclear Bolivia"
+            "Rosatom OR YLB energía nuclear Bolivia  OR \"rosatom\""
           ]
         },
         {
@@ -140,7 +140,7 @@
         }
       ],
       "queries": [
-        "Rosatom OR YLB energía nuclear Bolivia",
+        "Rosatom OR YLB energía nuclear Bolivia  OR \"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Bolivia",
         "energía nuclear SMR litio Bolivia",
         "política nuclear opinión pública Bolivia",
@@ -160,7 +160,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom OR Eletronuclear energia nuclear Brasil"
+            "Rosatom OR Eletronuclear energia nuclear Brasil  OR \"rosatom\""
           ]
         },
         {
@@ -186,7 +186,7 @@
         }
       ],
       "queries": [
-        "Rosatom OR Eletronuclear energia nuclear Brasil",
+        "Rosatom OR Eletronuclear energia nuclear Brasil  OR \"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energia nuclear Brasil",
         "energia nuclear SMR Eletronuclear Brasil",
         "política nuclear opinião pública Brasil"
@@ -205,8 +205,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom nhà máy điện hạt nhân",
-            "\"rosatom\""
+            "Rosatom nhà máy điện hạt nhân  OR \"rosatom\""
           ]
         },
         {
@@ -232,8 +231,7 @@
         }
       ],
       "queries": [
-        "Rosatom nhà máy điện hạt nhân",
-        "\"rosatom\"",
+        "Rosatom nhà máy điện hạt nhân  OR \"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC điện hạt nhân Việt Nam",
         "điện hạt nhân lò phản ứng mô-đun nhỏ",
         "ý kiến công chúng về điện hạt nhân"
@@ -297,8 +295,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom PLTN reaktor modular kecil OR \"rosatom\"",
-            "\"rosatom\""
+            "Rosatom PLTN reaktor modular kecil OR \"rosatom\""
           ]
         },
         {
@@ -325,7 +322,6 @@
       ],
       "queries": [
         "Rosatom PLTN reaktor modular kecil OR \"rosatom\"",
-        "\"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC PLTN Indonesia",
         "PLTN reaktor modular kecil limbah radioaktif",
         "kebijakan nuklir opini publik tentang nuklir"
@@ -344,8 +340,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom 核电 中国 OR \"rosatom\"",
-            "\"rosatom\" -\"rosatom.ru\""
+            "Rosatom 核电 中国 OR \"rosatom\""
           ]
         },
         {
@@ -372,7 +367,6 @@
       ],
       "queries": [
         "Rosatom 核电 中国 OR \"rosatom\"",
-        "\"rosatom\" -\"rosatom.ru\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 核电 中国",
         "核电 小型模块化反应堆 能源规划",
         "公众对核电的态度 能源规划"
@@ -391,7 +385,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom energía nuclear Cuba"
+            "Rosatom energía nuclear Cuba OR \"rosatom\""
           ]
         },
         {
@@ -417,7 +411,7 @@
         }
       ],
       "queries": [
-        "Rosatom energía nuclear Cuba",
+        "Rosatom energía nuclear Cuba OR \"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Cuba",
         "energía nuclear SMR plantas Cuba",
         "política nuclear opinión pública Cuba"
@@ -436,7 +430,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom OR TVEL AEBF Malaysia -site:.ru"
+            "Rosatom OR \"rosatom\" OR TVEL AEBF Malaysia -site:.ru"
           ]
         },
         {
@@ -462,7 +456,7 @@
         }
       ],
       "queries": [
-        "Rosatom OR TVEL AEBF Malaysia -site:.ru",
+        "Rosatom OR \"rosatom\" OR TVEL AEBF Malaysia -site:.ru",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear Malaysia",
         "nuclear energy SMR ASEAN Malaysia",
         "nuclear policy public opinion Malaysia"
@@ -481,7 +475,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom energía nuclear México"
+            "Rosatom energía nuclear México OR \"rosatom\""
           ]
         },
         {
@@ -507,7 +501,7 @@
         }
       ],
       "queries": [
-        "Rosatom energía nuclear México",
+        "Rosatom energía nuclear México OR \"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear México",
         "energía nuclear SMR plantas México",
         "política nuclear opinión pública México"
@@ -571,7 +565,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom energía nuclear Paraguay"
+            "Rosatom energía nuclear Paraguay OR \"rosatom\""
           ]
         },
         {
@@ -597,7 +591,7 @@
         }
       ],
       "queries": [
-        "Rosatom energía nuclear Paraguay",
+        "Rosatom energía nuclear Paraguay OR \"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Paraguay",
         "energía nuclear SMR plantas Paraguay",
         "política nuclear opinión pública Paraguay"
@@ -706,7 +700,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom OR SQM energía nuclear Chile"
+            "Rosatom OR SQM energía nuclear Chile OR \"rosatom\""
           ]
         },
         {
@@ -732,7 +726,7 @@
         }
       ],
       "queries": [
-        "Rosatom OR SQM energía nuclear Chile",
+        "Rosatom OR SQM energía nuclear Chile OR \"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC energía nuclear Chile",
         "energía nuclear SMR litio Chile",
         "política nuclear opinión pública Chile"
@@ -751,7 +745,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom OR TVEL \"Sri Lanka\" -site:.ru"
+            "Rosatom OR \"rosatom\" OR TVEL \"Sri Lanka\" -site:.ru"
           ]
         },
         {
@@ -777,7 +771,7 @@
         }
       ],
       "queries": [
-        "Rosatom OR TVEL \"Sri Lanka\" -site:.ru",
+        "Rosatom OR \"rosatom\" OR TVEL \"Sri Lanka\" -site:.ru",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC nuclear \"Sri Lanka\"",
         "nuclear energy SMR \"Sri Lanka\"",
         "nuclear policy public opinion \"Sri Lanka\""
