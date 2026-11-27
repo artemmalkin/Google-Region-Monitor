@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-27T05:52:25.274Z",
+  "updatedAt": "2026-11-27T06:08:15.923Z",
   "profiles": [
     {
       "id": "argentina",
@@ -336,13 +336,14 @@
       "resultLangs": "zh-CN",
       "region": "HK",
       "profileGroup": "Восточная и Юго-Восточная Азия",
-      "queryGroupsRevision": 4,
+      "queryGroupsRevision": 2,
       "queryGroups": [
         {
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom 核电 中国"
+            "Rosatom 核电 中国",
+            "\"rosatom\" -\"rosatom.ru\""
           ]
         },
         {
@@ -369,6 +370,7 @@
       ],
       "queries": [
         "Rosatom 核电 中国",
+        "\"rosatom\" -\"rosatom.ru\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC 核电 中国",
         "核电 小型模块化反应堆 能源规划",
         "公众对核电的态度 能源规划"
