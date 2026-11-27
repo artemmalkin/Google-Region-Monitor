@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-27T06:30:51.943Z",
+  "updatedAt": "2026-11-27T06:32:15.921Z",
   "profiles": [
     {
       "id": "argentina",
@@ -297,7 +297,7 @@
           "id": "rosatom-projects",
           "name": "Росатом и его проекты",
           "queries": [
-            "Rosatom PLTN reaktor modular kecil",
+            "Rosatom PLTN reaktor modular kecil OR \"rosatom\"",
             "\"rosatom\""
           ]
         },
@@ -324,7 +324,7 @@
         }
       ],
       "queries": [
-        "Rosatom PLTN reaktor modular kecil",
+        "Rosatom PLTN reaktor modular kecil OR \"rosatom\"",
         "\"rosatom\"",
         "Westinghouse OR EDF OR Framatome OR KHNP OR CNNC PLTN Indonesia",
         "PLTN reaktor modular kecil limbah radioaktif",
